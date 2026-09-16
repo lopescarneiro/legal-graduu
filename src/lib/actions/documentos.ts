@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { documentos } from "@/db/schema";
-import { requireSessao, somenteLeitura, ehEscritorio } from "@/lib/session";
-import { guardarArquivo } from "@/lib/storage";
+import { documentos, documentoAvaliacoes } from "@/db/schema";
+import { requireSessao, somenteLeitura, ehEscritorio, escopoClientes } from "@/lib/session";
+import { guardarArquivo, lerArquivo } from "@/lib/storage";
+import { iaConfigurada, avaliarDocumento, type AvaliacaoDocumento } from "@/lib/ia";
 import { registrarAudit } from "@/lib/audit";
 import type { ActionResult } from "@/lib/actions/result";
 
@@ -80,4 +82,85 @@ export async function uploadDocumento(formData: FormData): Promise<ActionResult>
   });
   revalidatePath("/compliance/repositorio");
   return { ok: true, message: "Documento enviado." };
+}
+
+/**
+ * Avaliação ADVISORY de um documento por IA. Barra documento sigiloso/sensível
+ * (LGPD art. 33 — sem transferência internacional de dado sob sigilo). Nunca
+ * carimba "em dia"; só registra pendências/riscos e sinaliza "pendente" quando
+ * há apontamentos. A validação de conformidade continua humana.
+ */
+export async function avaliarDocumentoIA(
+  documentoId: string,
+): Promise<ActionResult & { avaliacao?: AvaliacaoDocumento }> {
+  const s = await requireSessao();
+  if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+  if (!iaConfigurada()) return { ok: false, error: "Avaliação por IA indisponível." };
+
+  const esc = escopoClientes(s);
+  if (esc && esc.length === 0) return { ok: false, error: "Sem acesso." };
+  const [d] = await db
+    .select()
+    .from(documentos)
+    .where(
+      and(eq(documentos.id, documentoId), esc ? inArray(documentos.clienteId, esc) : undefined),
+    )
+    .limit(1);
+  if (!d) return { ok: false, error: "Documento não encontrado." };
+
+  // Barreira LGPD/sigilo — documento sensível NÃO vai para o pipeline de IA.
+  if (d.sigilo !== "normal" || d.contemDadosSensiveis) {
+    return {
+      ok: false,
+      error: "Documento sigiloso/sensível não pode ir para a IA (sigilo + LGPD art. 33).",
+    };
+  }
+  if (!d.arquivoPath) return { ok: false, error: "Documento sem arquivo." };
+  const mime = d.mime ?? "";
+  if (mime !== "application/pdf" && !mime.startsWith("image/")) {
+    return { ok: false, error: "A IA avalia apenas PDF ou imagem. Converta para PDF." };
+  }
+
+  let bytes: Buffer;
+  try {
+    bytes = await lerArquivo(d.arquivoPath);
+  } catch {
+    return { ok: false, error: "Falha ao ler o arquivo." };
+  }
+
+  let av: AvaliacaoDocumento;
+  try {
+    av = await avaliarDocumento({ bytes, mime, nome: d.nome, categoria: d.categoria });
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Falha na avaliação por IA." };
+  }
+
+  await db.insert(documentoAvaliacoes).values({
+    documentoId,
+    clienteId: d.clienteId,
+    resumo: av.resumo,
+    pendencias: av.pendencias,
+    riscos: av.riscos,
+    score: av.score,
+    status: "revisar", // advisory — sempre requer validação humana
+  });
+  // Nunca "em_dia" automático. Só sinaliza pendência quando há apontamentos.
+  const temIssue = av.pendencias.length > 0 || av.riscos.length > 0;
+  if (temIssue && d.status !== "pendente") {
+    await db
+      .update(documentos)
+      .set({ status: "pendente", atualizadoEm: new Date() })
+      .where(eq(documentos.id, documentoId));
+  }
+  await registrarAudit({
+    acao: "write",
+    entidade: "documento_avaliacao",
+    entidadeId: documentoId,
+    clienteId: d.clienteId,
+    atorId: s.id,
+    atorPapel: ehEscritorio(s) ? "escritorio" : "polo",
+    detalhe: { score: av.score, pendencias: av.pendencias.length, riscos: av.riscos.length },
+  });
+  revalidatePath("/compliance/repositorio");
+  return { ok: true, avaliacao: av };
 }

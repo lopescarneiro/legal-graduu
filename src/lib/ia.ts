@@ -237,3 +237,106 @@ export async function extrairCitacao(file: File): Promise<CitacaoExtraida> {
     observacoes: s(out.observacoes),
   };
 }
+
+// ===========================================================================
+// AVALIAÇÃO DE DOCUMENTO (Compliance — advisory)
+// ===========================================================================
+export type AvaliacaoDocumento = {
+  resumo: string;
+  pendencias: string[];
+  riscos: string[];
+  score: number; // 0-100 (maior = mais aderente). ADVISORY: não substitui revisão humana.
+};
+
+const PROMPT_AVALIACAO = `Você é advogado(a) de um escritório revisando um DOCUMENTO DE COMPLIANCE de uma empresa cliente (um polo de ensino EAD). O documento pode ser contrato, política, termo, procuração etc.
+
+Sua função é ASSISTIVA. Regras invioláveis:
+- NUNCA declare que o documento está "em dia", "tudo certo", "sem problemas" ou "aprovado". Essa validação é HUMANA (do advogado). No máximo diga que "não identifiquei pendências óbvias, mas requer revisão humana".
+- Aponte pendências (o que falta: cláusulas, assinaturas, datas, dados obrigatórios) e riscos (o que pode gerar problema jurídico/LGPD/trabalhista/consumerista).
+- Seja concreto e cite o ponto do documento. Não invente conteúdo que não está no documento.
+- resumo: 1-3 frases do que é o documento e do estado geral (sem carimbar aprovação).
+- pendencias: lista de itens objetivos a corrigir/completar (vazia se nenhuma óbvia).
+- riscos: lista de riscos jurídicos identificados (vazia se nenhum óbvio).
+- score: 0 a 100 indicando aderência aparente (maior = melhor), APENAS como triagem — deixe claro que é advisory.`;
+
+const SCHEMA_AVALIACAO = {
+  type: "object",
+  properties: {
+    resumo: { type: "string" },
+    pendencias: { type: "array", items: { type: "string" } },
+    riscos: { type: "array", items: { type: "string" } },
+    score: { type: "integer" },
+  },
+  required: ["resumo", "pendencias", "riscos", "score"],
+  additionalProperties: false,
+} as const;
+
+const listaStr = (v: unknown): string[] =>
+  Array.isArray(v) ? v.map((x) => (typeof x === "string" ? x.trim() : "")).filter(Boolean).slice(0, 30) : [];
+
+/**
+ * Avalia um documento de Compliance (PDF ou imagem) de forma ADVISORY. Nunca
+ * "carimba" conformidade — só aponta pendências/riscos para revisão humana.
+ * FALHA RUIDOSA. Quem chama DEVE barrar documentos sigilosos/sensíveis (LGPD).
+ */
+export async function avaliarDocumento(input: {
+  bytes: Buffer;
+  mime: string;
+  nome: string;
+  categoria: string;
+}): Promise<AvaliacaoDocumento> {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error("Avaliação por IA não configurada (defina ANTHROPIC_API_KEY).");
+  }
+  const ehPdf = input.mime === "application/pdf";
+  const ehImg = input.mime.startsWith("image/");
+  if (!ehPdf && !ehImg) {
+    throw new Error("A IA avalia apenas PDF ou imagem. Converta o documento para PDF.");
+  }
+
+  const client = new Anthropic();
+  const b64 = input.bytes.toString("base64");
+  const fonte = ehPdf
+    ? {
+        type: "document" as const,
+        source: { type: "base64" as const, media_type: "application/pdf" as const, data: b64 },
+      }
+    : {
+        type: "image" as const,
+        source: {
+          type: "base64" as const,
+          media_type: input.mime as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
+          data: b64,
+        },
+      };
+
+  const contexto = `Documento: "${input.nome}" (categoria: ${input.categoria}).`;
+  const response = await client.messages.create({
+    model: MODELO,
+    max_tokens: 3000,
+    thinking: { type: "adaptive" },
+    messages: [
+      { role: "user", content: [fonte, { type: "text", text: `${contexto}\n\n${PROMPT_AVALIACAO}` }] },
+    ],
+    output_config: { format: { type: "json_schema", schema: SCHEMA_AVALIACAO } },
+  });
+
+  const bloco = response.content.find((b) => b.type === "text");
+  if (!bloco || bloco.type !== "text") {
+    throw new Error("Não consegui avaliar o documento. Tente novamente ou revise manualmente.");
+  }
+  let out: Record<string, unknown>;
+  try {
+    out = JSON.parse(bloco.text) as Record<string, unknown>;
+  } catch {
+    throw new Error("A avaliação voltou em formato inesperado. Revise manualmente.");
+  }
+
+  const score = Math.max(0, Math.min(100, Math.trunc(Number(out.score) || 0)));
+  return {
+    resumo: s(out.resumo),
+    pendencias: listaStr(out.pendencias),
+    riscos: listaStr(out.riscos),
+    score,
+  };
+}

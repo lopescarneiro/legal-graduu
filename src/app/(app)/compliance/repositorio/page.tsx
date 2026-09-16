@@ -1,10 +1,15 @@
+import { desc, inArray } from "drizzle-orm";
 import { requireSessao, ehEscritorio } from "@/lib/session";
+import { db } from "@/db";
+import { documentoAvaliacoes } from "@/db/schema";
 import { listarDocumentos } from "@/lib/documentos";
 import { listarClientes } from "@/lib/clientes";
+import { iaConfigurada, type AvaliacaoDocumento } from "@/lib/ia";
 import { rotuloCategoria } from "@/lib/modelos-constantes";
 import { formatDate } from "@/lib/dates";
 import { Card, Badge, type BadgeProps } from "@/components/ui";
 import { UploadForm } from "./_components/upload-form";
+import { AvaliacaoDoc } from "./_components/avaliacao-doc";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +35,39 @@ export default async function Repositorio() {
     const arr = porCategoria.get(d.categoria) ?? [];
     arr.push(d);
     porCategoria.set(d.categoria, arr);
+  }
+
+  const iaDisponivel = iaConfigurada();
+  const docIds = docs.map((d) => d.id);
+  const avaliacoes = docIds.length
+    ? await db
+        .select()
+        .from(documentoAvaliacoes)
+        .where(inArray(documentoAvaliacoes.documentoId, docIds))
+        .orderBy(desc(documentoAvaliacoes.criadoEm))
+    : [];
+  const ultimaAval = new Map<string, AvaliacaoDocumento>();
+  for (const a of avaliacoes) {
+    if (!ultimaAval.has(a.documentoId)) {
+      ultimaAval.set(a.documentoId, {
+        resumo: a.resumo ?? "",
+        pendencias: a.pendencias ?? [],
+        riscos: a.riscos ?? [],
+        score: a.score ?? 0,
+      });
+    }
+  }
+
+  function elegibilidade(d: Doc): { elegivel: boolean; motivo?: string } {
+    if (!iaDisponivel) return { elegivel: false };
+    if (d.sigilo !== "normal" || d.contemDadosSensiveis) {
+      return { elegivel: false, motivo: "sigiloso — fora da IA" };
+    }
+    const mime = d.mime ?? "";
+    if (mime !== "application/pdf" && !mime.startsWith("image/")) {
+      return { elegivel: false, motivo: "IA: envie PDF/imagem" };
+    }
+    return { elegivel: true };
   }
 
   return (
@@ -77,10 +115,21 @@ export default async function Repositorio() {
                           <Badge tone={st.tone}>{st.rotulo}</Badge>
                           {d.vencimentoEm && <span>vence {formatDate(d.vencimentoEm)}</span>}
                         </div>
+                        {(() => {
+                          const el = elegibilidade(d);
+                          return (
+                            <AvaliacaoDoc
+                              documentoId={d.id}
+                              elegivel={el.elegivel}
+                              motivo={el.motivo}
+                              inicial={ultimaAval.get(d.id) ?? null}
+                            />
+                          );
+                        })()}
                       </div>
                       <a
                         href={`/api/documentos/${d.id}`}
-                        className="inline-flex items-center rounded-[var(--r)] border border-line2 bg-card px-3 py-1.5 text-sm font-medium text-ink hover:bg-canvas2"
+                        className="inline-flex items-center self-start rounded-[var(--r)] border border-line2 bg-card px-3 py-1.5 text-sm font-medium text-ink hover:bg-canvas2"
                       >
                         Baixar
                       </a>
