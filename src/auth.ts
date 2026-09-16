@@ -117,5 +117,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         };
       },
     }),
+    Credentials({
+      id: "preview",
+      credentials: { email: { label: "E-mail" }, senha: { label: "Senha" } },
+      async authorize(cred) {
+        // PREVIEW PRIVADO: funciona em produção MAS só atrás da proteção da Vercel
+        // (Vercel Authentication = só o time). Exige LEGAL_PREVIEW_LOGIN=on + senha
+        // forte. Temporário até o SSO do Hub ser fiado — depois removemos.
+        if (process.env.LEGAL_PREVIEW_LOGIN !== "on") return null;
+        const esperada = process.env.LEGAL_PREVIEW_PASSWORD;
+        if (!esperada) return null;
+        const parsed = z
+          .object({ email: z.string().email(), senha: z.string().min(1) })
+          .safeParse(cred);
+        if (!parsed.success) return null;
+        if (parsed.data.senha !== esperada) return null;
+        return {
+          id: DEV_UUID,
+          email: parsed.data.email,
+          name: "Escritório (preview)",
+          nome: "Escritório (preview)",
+          superAdmin: false,
+          escritorio: true,
+          clienteId: null,
+          papeis: ["advogado"],
+          impersonando: false,
+        };
+      },
+    }),
   ],
 });

@@ -3,8 +3,8 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 
-export function LoginForm() {
-  const [email, setEmail] = useState("dev@legal.graduu.com.br");
+export function LoginForm({ provider }: { provider: "dev" | "preview" }) {
+  const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -13,7 +13,7 @@ export function LoginForm() {
     e.preventDefault();
     setCarregando(true);
     setErro(null);
-    const r = await signIn("dev", { email, senha, redirect: false });
+    const r = await signIn(provider, { email, senha, redirect: false });
     setCarregando(false);
     if (r?.error) {
       setErro("Credenciais inválidas.");
