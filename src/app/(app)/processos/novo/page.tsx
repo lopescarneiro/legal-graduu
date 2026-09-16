@@ -1,5 +1,6 @@
 import { requireSessao, ehEscritorio } from "@/lib/session";
 import { listarClientes } from "@/lib/clientes";
+import { iaConfigurada } from "@/lib/ia";
 import { NovoProcessoForm } from "../_components/novo-processo-form";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function NovoProcesso() {
           Registre o processo — ele entra no funil do ramo, na primeira etapa.
         </p>
       </div>
-      <NovoProcessoForm escritorio={escritorio} clientes={clientes} />
+      <NovoProcessoForm escritorio={escritorio} clientes={clientes} iaDisponivel={iaConfigurada()} />
     </div>
   );
 }

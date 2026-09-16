@@ -12,6 +12,7 @@
     "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.126.0",
     "@electric-sql/pglite": "^0.5.3",
     "@graduu/ui": "https://github.com/lopescarneiro/graduu-ui/archive/3823f476bf9356bcc15390dd0b6fbe58006370cf.tar.gz",
     "@upstash/ratelimit": "^2.0.8",
