@@ -92,7 +92,7 @@ export async function alternarAtivoModelo(id: string, ativo: boolean): Promise<A
 export async function gerarDocumento(
   modeloId: string,
   valores: Record<string, string>,
-): Promise<ActionResult & { conteudo?: string }> {
+): Promise<ActionResult & { conteudo?: string; geracaoId?: string }> {
   const s = await requireSessao();
   if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
 
@@ -106,13 +106,16 @@ export async function gerarDocumento(
   }
 
   const conteudo = preencherCorpo(m.corpo, valores);
-  await db.insert(modeloGeracoes).values({
-    modeloId,
-    clienteId: s.clienteId ?? null,
-    valores,
-    conteudoGerado: conteudo,
-    criadoPorId: s.id,
-  });
+  const [geracao] = await db
+    .insert(modeloGeracoes)
+    .values({
+      modeloId,
+      clienteId: s.clienteId ?? null,
+      valores,
+      conteudoGerado: conteudo,
+      criadoPorId: s.id,
+    })
+    .returning({ id: modeloGeracoes.id });
   await registrarAudit({
     acao: "write",
     entidade: "modelo_geracao",
@@ -123,5 +126,5 @@ export async function gerarDocumento(
     detalhe: { modelo: m.titulo },
   });
   revalidatePath(`/compliance/modelos/${modeloId}/preencher`);
-  return { ok: true, message: "Documento gerado.", conteudo };
+  return { ok: true, message: "Documento gerado.", conteudo, geracaoId: geracao?.id };
 }

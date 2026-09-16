@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { gerarDocumento } from "@/lib/actions/modelos";
 import type { CampoModelo } from "@/lib/modelos-constantes";
-import { Button, inputClasses, cn } from "@/components/ui";
+import { Button, buttonVariants, inputClasses, cn } from "@/components/ui";
 
 const inputCls = inputClasses;
 
 export function PreencherForm({ modeloId, campos }: { modeloId: string; campos: CampoModelo[] }) {
   const [valores, setValores] = useState<Record<string, string>>({});
   const [conteudo, setConteudo] = useState<string | null>(null);
+  const [geracaoId, setGeracaoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
   const [copiado, setCopiado] = useState(false);
@@ -29,7 +30,11 @@ export function PreencherForm({ modeloId, campos }: { modeloId: string; campos: 
       return;
     }
     setConteudo(r.conteudo ?? "");
+    setGeracaoId(r.geracaoId ?? null);
   }
+
+  const baixar = (fmt: "docx" | "pdf") =>
+    `/compliance/modelos/${modeloId}/preencher/download?g=${geracaoId}&fmt=${fmt}`;
 
   async function copiar() {
     if (conteudo == null) return;
@@ -80,11 +85,29 @@ export function PreencherForm({ modeloId, campos }: { modeloId: string; campos: 
 
       {conteudo != null && (
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-base font-semibold text-ink">Documento gerado</span>
-            <Button type="button" variant="secondary" size="sm" onClick={copiar}>
-              {copiado ? "Copiado!" : "Copiar"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {geracaoId && (
+                <>
+                  <a
+                    href={baixar("docx")}
+                    className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+                  >
+                    Baixar Word
+                  </a>
+                  <a
+                    href={baixar("pdf")}
+                    className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+                  >
+                    Baixar PDF
+                  </a>
+                </>
+              )}
+              <Button type="button" variant="secondary" size="sm" onClick={copiar}>
+                {copiado ? "Copiado!" : "Copiar"}
+              </Button>
+            </div>
           </div>
           <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-canvas2 p-4 text-sm">
             {conteudo}

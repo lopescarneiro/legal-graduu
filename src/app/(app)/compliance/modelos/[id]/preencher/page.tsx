@@ -49,8 +49,25 @@ export default async function PreencherModelo({ params }: { params: Promise<{ id
           <span className="text-base font-semibold text-ink">Gerações recentes</span>
           <Card className="divide-y divide-line text-sm">
             {geracoes.map((g) => (
-              <div key={g.id} className="px-4 py-2 text-xs text-muted">
-                {formatDateTime(g.criadoEm)}
+              <div
+                key={g.id}
+                className="flex items-center justify-between px-4 py-2 text-xs text-muted"
+              >
+                <span>{formatDateTime(g.criadoEm)}</span>
+                <span className="flex items-center gap-3">
+                  <a
+                    href={`/compliance/modelos/${m.id}/preencher/download?g=${g.id}&fmt=docx`}
+                    className="text-brand hover:underline"
+                  >
+                    Word
+                  </a>
+                  <a
+                    href={`/compliance/modelos/${m.id}/preencher/download?g=${g.id}&fmt=pdf`}
+                    className="text-brand hover:underline"
+                  >
+                    PDF
+                  </a>
+                </span>
               </div>
             ))}
           </Card>
