@@ -1,0 +1,9 @@
+{
+  "regions": ["gru1"],
+  "crons": [
+    {
+      "path": "/api/cron/prazos",
+      "schedule": "0 11 * * *"
+    }
+  ]
+}
