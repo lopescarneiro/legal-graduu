@@ -3,8 +3,9 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { criarPrazo } from "@/lib/actions/prazos";
+import { Button, inputClasses } from "@/components/ui";
 
-const inputCls = "rounded-md border border-black/15 px-3 py-2 text-sm";
+const inputCls = inputClasses;
 
 export function NovoPrazoForm({ processoId }: { processoId: string }) {
   const router = useRouter();
@@ -33,7 +34,7 @@ export function NovoPrazoForm({ processoId }: { processoId: string }) {
     <form
       ref={formRef}
       onSubmit={onSubmit}
-      className="grid grid-cols-1 gap-3 rounded-lg border border-black/10 p-4 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-3 rounded-[var(--r-card)] border border-line bg-card p-4 shadow-[var(--sh-sm)] sm:grid-cols-2"
     >
       <input type="hidden" name="processoId" value={processoId} />
       <label className="flex flex-col gap-1 text-sm">
@@ -70,16 +71,12 @@ export function NovoPrazoForm({ processoId }: { processoId: string }) {
         Data da publicação
         <input name="dataPublicacao" type="date" className={inputCls} />
       </label>
-      {erro && <p className="text-sm text-red-600 sm:col-span-2">{erro}</p>}
-      {ok && <p className="text-sm text-[var(--success,#16a34a)] sm:col-span-2">{ok}</p>}
+      {erro && <p className="text-sm text-danger sm:col-span-2">{erro}</p>}
+      {ok && <p className="text-sm text-success sm:col-span-2">{ok}</p>}
       <div className="sm:col-span-2">
-        <button
-          type="submit"
-          disabled={enviando}
-          className="rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-        >
+        <Button type="submit" disabled={enviando}>
           {enviando ? "Calculando…" : "Calcular prazo (sugestão)"}
-        </button>
+        </Button>
       </div>
     </form>
   );

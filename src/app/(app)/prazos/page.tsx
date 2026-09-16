@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { prazos, processos } from "@/db/schema";
 import { requireSessao, escopoClientes } from "@/lib/session";
 import { formatDate } from "@/lib/dates";
+import { Card, Badge } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -45,22 +46,22 @@ export default async function PrazosPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold">Prazos</h1>
-        <p className="text-sm opacity-70">Prazos em aberto. Fatais não confirmados ficam em destaque.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Prazos</h1>
+        <p className="text-sm text-muted">Prazos em aberto. Fatais não confirmados ficam em destaque.</p>
       </div>
 
       {fataisNaoConfirmados > 0 && (
-        <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div className="rounded-md bg-danger-tint px-4 py-3 text-sm text-danger">
           ⚠️ {fataisNaoConfirmados} prazo(s) <strong>fatal(is)</strong> aguardando confirmação humana.
         </div>
       )}
 
       {lista.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-black/15 p-6 text-sm opacity-70">
+        <Card className="border-dashed p-6 text-sm text-muted">
           Nenhum prazo em aberto.
-        </p>
+        </Card>
       ) : (
-        <div className="flex flex-col divide-y divide-black/10 rounded-lg border border-black/10">
+        <Card className="divide-y divide-line">
           {lista.map((p) => {
             const fatal = p.tipo === "fatal_peremptorio";
             const validado = !!p.validadoEm;
@@ -68,28 +69,23 @@ export default async function PrazosPage() {
               <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span
-                      className={
-                        "rounded px-1.5 py-0.5 text-[10px] uppercase " +
-                        (fatal ? "bg-red-100 text-red-800" : "bg-black/10 text-black/70")
-                      }
-                    >
+                    <Badge tone={fatal ? "danger" : "neutral"} className="uppercase">
                       {fatal ? "fatal" : "dilatório"}
-                    </span>
+                    </Badge>
                     <Link
                       href={`/processos/${p.processoId}`}
                       className="text-sm font-medium hover:underline"
                     >
                       {p.numeroCnj ?? p.tipoAcao ?? "Processo"}
                     </Link>
-                    <span className="text-xs opacity-60">{p.descricao ?? "Prazo"}</span>
+                    <span className="text-xs text-muted">{p.descricao ?? "Prazo"}</span>
                   </div>
                 </div>
                 <div className="text-sm">
                   {validado ? (
-                    <span className="text-green-700">Vence {formatDate(p.dataVencimento)}</span>
+                    <span className="text-success">Vence {formatDate(p.dataVencimento)}</span>
                   ) : (
-                    <span className="text-amber-700">
+                    <span className="text-warn">
                       Sugerido {p.dataSugerida ? formatDate(p.dataSugerida) : "—"} · confira
                     </span>
                   )}
@@ -97,7 +93,7 @@ export default async function PrazosPage() {
               </div>
             );
           })}
-        </div>
+        </Card>
       )}
     </div>
   );

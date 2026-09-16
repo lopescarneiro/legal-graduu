@@ -7,13 +7,14 @@ import { formatDateTime } from "@/lib/dates";
 import { NovaConsultaForm } from "./_components/nova-consulta-form";
 import { ResponderForm } from "./_components/responder-form";
 import { encerrarConsulta } from "@/lib/actions/consultas";
+import { Card, Badge } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-const STATUS: Record<string, string> = {
-  aberta: "bg-amber-100 text-amber-800",
-  respondida: "bg-green-100 text-green-800",
-  encerrada: "bg-black/10 text-black/60",
+const STATUS_TONE: Record<string, "warn" | "success" | "neutral"> = {
+  aberta: "warn",
+  respondida: "success",
+  encerrada: "neutral",
 };
 
 export default async function ConsultasPage() {
@@ -37,34 +38,32 @@ export default async function ConsultasPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-semibold">Consultas</h1>
-        <p className="text-sm opacity-70">Perguntas jurídicas — resposta em até 48h úteis.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Consultas</h1>
+        <p className="text-sm text-muted">Perguntas jurídicas — resposta em até 48h úteis.</p>
       </div>
 
       <NovaConsultaForm escritorio={escritorio} clientes={clientes} />
 
       {lista.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-black/15 p-6 text-sm opacity-70">
+        <Card className="border-dashed p-6 text-sm text-muted">
           Nenhuma consulta ainda.
-        </p>
+        </Card>
       ) : (
         <div className="flex flex-col gap-3">
           {lista.map((c) => (
-            <div key={c.id} className="rounded-lg border border-black/10 p-4">
+            <Card key={c.id} className="p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-medium">{c.assunto}</span>
-                <span className={`rounded px-2 py-0.5 text-xs ${STATUS[c.status] ?? ""}`}>
-                  {c.status}
-                </span>
+                <Badge tone={STATUS_TONE[c.status] ?? "neutral"}>{c.status}</Badge>
               </div>
-              <p className="mt-1 whitespace-pre-wrap text-sm opacity-80">{c.pergunta}</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-muted">{c.pergunta}</p>
               {c.status === "aberta" && c.slaVenceEm && (
-                <p className="mt-1 text-xs opacity-50">Responder até {formatDateTime(c.slaVenceEm)}</p>
+                <p className="mt-1 text-xs text-muted">Responder até {formatDateTime(c.slaVenceEm)}</p>
               )}
 
               {c.resposta && (
-                <div className="mt-3 rounded-md border-l-2 border-[var(--brand)] bg-black/[0.02] p-3">
-                  <div className="text-xs font-medium opacity-60">Resposta do escritório</div>
+                <div className="mt-3 rounded-md border-l-2 border-brand bg-canvas2 p-3">
+                  <div className="text-xs font-medium text-muted">Resposta do escritório</div>
                   <p className="mt-1 whitespace-pre-wrap text-sm">{c.resposta}</p>
                 </div>
               )}
@@ -79,10 +78,10 @@ export default async function ConsultasPage() {
                   }}
                   className="mt-2"
                 >
-                  <button className="text-xs text-black/50 hover:underline">Encerrar</button>
+                  <button className="text-xs text-muted hover:text-ink">Encerrar</button>
                 </form>
               )}
-            </div>
+            </Card>
           ))}
         </div>
       )}

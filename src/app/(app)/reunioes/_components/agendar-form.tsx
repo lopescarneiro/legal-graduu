@@ -3,8 +3,9 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { agendarReuniao } from "@/lib/actions/reunioes";
+import { Field, Button, inputClasses } from "@/components/ui";
 
-const inputCls = "rounded-md border border-black/15 px-3 py-2 text-sm";
+const inputCls = inputClasses;
 
 export function AgendarForm({
   escritorio,
@@ -39,11 +40,10 @@ export function AgendarForm({
     <form
       ref={formRef}
       onSubmit={onSubmit}
-      className="grid grid-cols-1 gap-3 rounded-lg border border-black/10 p-4 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-3 rounded-[var(--r-card)] border border-line bg-card p-4 shadow-[var(--sh-sm)] sm:grid-cols-2"
     >
       {escritorio && (
-        <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-          Cliente
+        <Field label="Cliente" className="sm:col-span-2">
           <select name="clienteId" className={inputCls} required defaultValue="">
             <option value="" disabled>
               Selecione o cliente…
@@ -54,30 +54,23 @@ export function AgendarForm({
               </option>
             ))}
           </select>
-        </label>
+        </Field>
       )}
-      <label className="flex flex-col gap-1 text-sm">
-        Data e hora
+      <Field label="Data e hora">
         <input name="dataHora" type="datetime-local" className={inputCls} required />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Assunto (opcional)
+      </Field>
+      <Field label="Assunto (opcional)">
         <input name="tipo" className={inputCls} placeholder="Ex.: Revisão de contratos" />
-      </label>
-      <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-        Link da reunião (opcional)
+      </Field>
+      <Field label="Link da reunião (opcional)" className="sm:col-span-2">
         <input name="link" className={inputCls} placeholder="https://…" />
-      </label>
-      {erro && <p className="text-sm text-red-600 sm:col-span-2">{erro}</p>}
-      {ok && <p className="text-sm text-[var(--success,#16a34a)] sm:col-span-2">{ok}</p>}
+      </Field>
+      {erro && <p className="text-sm text-danger sm:col-span-2">{erro}</p>}
+      {ok && <p className="text-sm text-success sm:col-span-2">{ok}</p>}
       <div className="sm:col-span-2">
-        <button
-          type="submit"
-          disabled={enviando}
-          className="rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-        >
+        <Button type="submit" disabled={enviando}>
           {enviando ? "Agendando…" : "Agendar reunião"}
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -3,8 +3,9 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { criarConsulta } from "@/lib/actions/consultas";
+import { Field, Button, inputClasses, cn } from "@/components/ui";
 
-const inputCls = "rounded-md border border-black/15 px-3 py-2 text-sm";
+const inputCls = inputClasses;
 
 export function NovaConsultaForm({
   escritorio,
@@ -39,11 +40,10 @@ export function NovaConsultaForm({
     <form
       ref={formRef}
       onSubmit={onSubmit}
-      className="flex flex-col gap-3 rounded-lg border border-black/10 p-4"
+      className="flex flex-col gap-3 rounded-[var(--r-card)] border border-line bg-card p-4 shadow-[var(--sh-sm)]"
     >
       {escritorio && (
-        <label className="flex flex-col gap-1 text-sm">
-          Cliente
+        <Field label="Cliente">
           <select name="clienteId" className={inputCls} required defaultValue="">
             <option value="" disabled>
               Selecione o cliente…
@@ -54,25 +54,19 @@ export function NovaConsultaForm({
               </option>
             ))}
           </select>
-        </label>
+        </Field>
       )}
-      <label className="flex flex-col gap-1 text-sm">
-        Assunto
+      <Field label="Assunto">
         <input name="assunto" className={inputCls} placeholder="Resumo da dúvida" />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Pergunta
-        <textarea name="pergunta" className={`${inputCls} min-h-24`} />
-      </label>
-      {erro && <p className="text-sm text-red-600">{erro}</p>}
-      {ok && <p className="text-sm text-[var(--success,#16a34a)]">{ok}</p>}
-      <button
-        type="submit"
-        disabled={enviando}
-        className="self-start rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-      >
+      </Field>
+      <Field label="Pergunta">
+        <textarea name="pergunta" className={cn(inputCls, "h-auto min-h-24 py-2")} />
+      </Field>
+      {erro && <p className="text-sm text-danger">{erro}</p>}
+      {ok && <p className="text-sm text-success">{ok}</p>}
+      <Button type="submit" disabled={enviando} className="self-start">
         {enviando ? "Enviando…" : "Enviar consulta"}
-      </button>
+      </Button>
     </form>
   );
 }

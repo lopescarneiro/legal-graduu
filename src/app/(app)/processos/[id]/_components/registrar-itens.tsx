@@ -7,8 +7,9 @@ import {
   registrarAudiencia,
   registrarParte,
 } from "@/lib/actions/processo-itens";
+import { Button, inputClasses } from "@/components/ui";
 
-const inputCls = "rounded-md border border-black/15 px-3 py-2 text-sm";
+const inputCls = inputClasses;
 
 type Acao = (fd: FormData) => Promise<{ ok: boolean; error?: string; message?: string }>;
 
@@ -46,18 +47,15 @@ function Form({
     <form
       ref={formRef}
       onSubmit={onSubmit}
-      className="grid grid-cols-1 gap-2 rounded-md border border-black/10 p-3 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-2 rounded-[var(--r-card)] border border-line bg-card p-3 shadow-[var(--sh-sm)] sm:grid-cols-2"
     >
       <input type="hidden" name="processoId" value={processoId} />
       {children}
-      {erro && <p className="text-sm text-red-600 sm:col-span-2">{erro}</p>}
+      {erro && <p className="text-sm text-danger sm:col-span-2">{erro}</p>}
       <div className="sm:col-span-2">
-        <button
-          disabled={enviando}
-          className="rounded-md bg-[var(--brand)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-        >
+        <Button type="submit" size="sm" disabled={enviando}>
           {enviando ? "Salvando…" : submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );

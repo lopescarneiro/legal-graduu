@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { criarProcesso } from "@/lib/actions/processos";
 import { RAMOS } from "@/lib/funil-constantes";
-
-const inputCls = "rounded-md border border-black/15 px-3 py-2 text-sm";
+import { Button, Field, Input, inputClasses } from "@/components/ui";
 
 export function NovoProcessoForm({
   escritorio,
@@ -36,51 +35,44 @@ export function NovoProcessoForm({
   return (
     <form onSubmit={onSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {escritorio && (
-        <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-          Cliente
-          <select name="clienteId" className={inputCls} required defaultValue="">
-            <option value="" disabled>
-              Selecione o cliente…
-            </option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nome}
+        <div className="sm:col-span-2">
+          <Field label="Cliente">
+            <select name="clienteId" className={inputClasses} required defaultValue="">
+              <option value="" disabled>
+                Selecione o cliente…
               </option>
-            ))}
-          </select>
-        </label>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
       )}
-      <label className="flex flex-col gap-1 text-sm">
-        Ramo
-        <select name="ramo" className={inputCls} defaultValue="trabalhista">
+      <Field label="Ramo">
+        <select name="ramo" className={inputClasses} defaultValue="trabalhista">
           {RAMOS.map((r) => (
             <option key={r.valor} value={r.valor}>
               {r.rotulo}
             </option>
           ))}
         </select>
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Número CNJ (opcional)
-        <input name="numeroCnj" className={inputCls} placeholder="NNNNNNN-DD.AAAA.J.TR.OOOO" />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Tipo de ação
-        <input name="tipoAcao" className={inputCls} placeholder="Ex.: Reclamação trabalhista" />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Valor da causa (R$)
-        <input name="valorCausa" className={inputCls} placeholder="0,00" inputMode="decimal" />
-      </label>
-      {erro && <p className="text-sm text-red-600 sm:col-span-2">{erro}</p>}
+      </Field>
+      <Field label="Número CNJ (opcional)">
+        <Input name="numeroCnj" placeholder="NNNNNNN-DD.AAAA.J.TR.OOOO" />
+      </Field>
+      <Field label="Tipo de ação">
+        <Input name="tipoAcao" placeholder="Ex.: Reclamação trabalhista" />
+      </Field>
+      <Field label="Valor da causa (R$)">
+        <Input name="valorCausa" placeholder="0,00" inputMode="decimal" />
+      </Field>
+      {erro && <p className="text-sm text-danger sm:col-span-2">{erro}</p>}
       <div className="sm:col-span-2">
-        <button
-          type="submit"
-          disabled={enviando}
-          className="rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-        >
+        <Button type="submit" disabled={enviando}>
           {enviando ? "Criando…" : "Criar processo"}
-        </button>
+        </Button>
       </div>
     </form>
   );

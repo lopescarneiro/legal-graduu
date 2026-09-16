@@ -4,6 +4,7 @@ import { kpisEscritorio, proximosPrazos, processosDoPolo } from "@/lib/painel";
 import { statusHumanizado } from "@/lib/funil-constantes";
 import { formatBRL } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
+import { Card, Badge, cn } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -16,75 +17,58 @@ export default async function Painel() {
     const stats = [
       { rotulo: "Processos ativos", valor: String(kpis.ativos) },
       { rotulo: "Prazos a vencer (7d)", valor: String(kpis.prazos7) },
-      {
-        rotulo: "Fatais não confirmados",
-        valor: String(kpis.fatais),
-        alerta: kpis.fatais > 0,
-      },
+      { rotulo: "Fatais não confirmados", valor: String(kpis.fatais), alerta: kpis.fatais > 0 },
       { rotulo: "Audiências (7d)", valor: String(kpis.aud7) },
       { rotulo: "Valor em risco", valor: formatBRL(kpis.riscoCents) },
     ];
     return (
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-semibold">Painel do escritório</h1>
-          <p className="text-sm opacity-70">Carteira de todos os clientes.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Painel do escritório</h1>
+          <p className="text-sm text-muted">Carteira de todos os clientes.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {stats.map((st) => (
-            <div
-              key={st.rotulo}
-              className={
-                "rounded-lg border p-4 " +
-                (st.alerta ? "border-red-300 bg-red-50" : "border-black/10")
-              }
-            >
-              <div className={"text-2xl font-semibold " + (st.alerta ? "text-red-700" : "")}>
+            <Card key={st.rotulo} className={cn("p-4", st.alerta && "border-danger/40 bg-danger-tint")}>
+              <div className={cn("text-2xl font-bold", st.alerta ? "text-danger" : "text-ink")}>
                 {st.valor}
               </div>
-              <div className="text-xs opacity-70">{st.rotulo}</div>
-            </div>
+              <div className="mt-0.5 text-xs text-muted">{st.rotulo}</div>
+            </Card>
           ))}
         </div>
 
         <section className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Próximos prazos</h2>
-            <Link href="/prazos" className="text-sm text-[var(--brand)] hover:underline">
+            <h2 className="text-base font-semibold text-ink">Próximos prazos</h2>
+            <Link href="/prazos" className="text-sm font-medium text-brand hover:underline">
               Ver todos
             </Link>
           </div>
           {prazos.length === 0 ? (
-            <p className="text-sm opacity-60">Nenhum prazo em aberto.</p>
+            <Card className="p-6 text-sm text-muted">Nenhum prazo em aberto.</Card>
           ) : (
-            <div className="flex flex-col divide-y divide-black/10 rounded-lg border border-black/10">
+            <Card className="divide-y divide-line">
               {prazos.map((p) => {
                 const fatal = p.tipo === "fatal_peremptorio";
                 return (
-                  <div key={p.id} className="flex items-center justify-between gap-2 px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={
-                          "rounded px-1.5 py-0.5 text-[10px] uppercase " +
-                          (fatal ? "bg-red-100 text-red-800" : "bg-black/10 text-black/70")
-                        }
-                      >
-                        {fatal ? "fatal" : "dilatório"}
-                      </span>
+                  <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Badge tone={fatal ? "danger" : "neutral"}>{fatal ? "fatal" : "dilatório"}</Badge>
                       <Link
                         href={`/processos/${p.processoId}`}
-                        className="text-sm font-medium hover:underline"
+                        className="truncate text-sm font-medium text-ink hover:underline"
                       >
                         {p.numeroCnj ?? "Processo"}
                       </Link>
-                      <span className="text-xs opacity-60">{p.descricao ?? "Prazo"}</span>
+                      <span className="truncate text-xs text-muted">{p.descricao ?? "Prazo"}</span>
                     </div>
-                    <span className="text-sm">
+                    <span className="shrink-0 text-sm">
                       {p.validadoEm ? (
-                        <span className="text-green-700">{formatDate(p.dataVencimento)}</span>
+                        <span className="font-medium text-success">{formatDate(p.dataVencimento)}</span>
                       ) : (
-                        <span className="text-amber-700">
+                        <span className="text-warn">
                           {p.dataSugerida ? `${formatDate(p.dataSugerida)} · confira` : "confira"}
                         </span>
                       )}
@@ -92,7 +76,7 @@ export default async function Painel() {
                   </div>
                 );
               })}
-            </div>
+            </Card>
           )}
         </section>
       </div>
@@ -109,40 +93,38 @@ export default async function Painel() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Meu jurídico</h1>
-        <p className="text-sm opacity-70">Acompanhe seus processos e pendências.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Meu jurídico</h1>
+        <p className="text-sm text-muted">Acompanhe seus processos e pendências.</p>
       </div>
 
-      <div className="rounded-lg border border-black/10 p-4">
-        <div className="text-xs opacity-70">Minha exposição total (processos ativos)</div>
-        <div className="text-3xl font-semibold">{formatBRL(exposicao)}</div>
-      </div>
+      <Card className="bg-[image:var(--grad)] p-5 text-white">
+        <div className="text-xs opacity-90">Minha exposição total (processos ativos)</div>
+        <div className="text-3xl font-bold">{formatBRL(exposicao)}</div>
+      </Card>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold">Meus processos</h2>
+        <h2 className="text-base font-semibold text-ink">Meus processos</h2>
         {processos.length === 0 ? (
-          <p className="text-sm opacity-60">Nenhum processo.</p>
+          <Card className="p-6 text-sm text-muted">Nenhum processo.</Card>
         ) : (
-          <div className="flex flex-col divide-y divide-black/10 rounded-lg border border-black/10">
+          <Card className="divide-y divide-line">
             {processos.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-2 px-4 py-3">
-                <div>
+              <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
                   <Link
                     href={`/processos/${p.id}`}
-                    className="text-sm font-medium hover:underline"
+                    className="truncate text-sm font-medium text-ink hover:underline"
                   >
                     {p.numeroCnj ?? p.tipoAcao ?? "Processo"}
                   </Link>
                   {p.valorCausaCents != null && (
-                    <div className="text-xs opacity-60">{formatBRL(p.valorCausaCents)}</div>
+                    <div className="text-xs text-muted">{formatBRL(p.valorCausaCents)}</div>
                   )}
                 </div>
-                <span className="rounded-full bg-[var(--brand)]/10 px-3 py-1 text-xs text-[var(--brand)]">
-                  {statusHumanizado(p.etapaChave)}
-                </span>
+                <Badge tone="brand">{statusHumanizado(p.etapaChave)}</Badge>
               </div>
             ))}
-          </div>
+          </Card>
         )}
       </section>
     </div>

@@ -34,7 +34,7 @@ export function MoverCard({
       value={atual}
       onChange={onChange}
       disabled={carregando}
-      className="mt-1 w-full rounded border border-black/15 px-1 py-0.5 text-xs disabled:opacity-50"
+      className="mt-1 w-full rounded border border-line2 px-1 py-0.5 text-xs disabled:opacity-50"
       title="Mover para etapa (permite retrocesso)"
     >
       {etapas.map((e) => (

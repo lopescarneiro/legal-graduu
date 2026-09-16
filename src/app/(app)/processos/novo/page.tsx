@@ -12,11 +12,11 @@ export default async function NovoProcesso() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <a href="/processos" className="text-xs text-[var(--brand)] hover:underline">
+        <a href="/processos" className="text-xs text-brand hover:underline">
           ← Processos
         </a>
-        <h1 className="text-2xl font-semibold">Novo processo</h1>
-        <p className="text-sm opacity-70">
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Novo processo</h1>
+        <p className="text-sm text-muted">
           Registre o processo — ele entra no funil do ramo, na primeira etapa.
         </p>
       </div>

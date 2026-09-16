@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { confirmarPrazo } from "@/lib/actions/prazos";
+import { Button, inputClasses } from "@/components/ui";
 
 export function ConfirmarPrazo({ prazoId, sugerida }: { prazoId: string; sugerida: string | null }) {
   const router = useRouter();
@@ -25,22 +26,18 @@ export function ConfirmarPrazo({ prazoId, sugerida }: { prazoId: string; sugerid
 
   return (
     <form onSubmit={onSubmit} className="mt-2 flex flex-wrap items-center gap-2">
-      <span className="text-xs opacity-60">Confirmar data:</span>
+      <span className="text-xs text-muted">Confirmar data:</span>
       <input
         type="date"
         value={data}
         onChange={(e) => setData(e.target.value)}
-        className="rounded-md border border-black/15 px-2 py-1 text-sm"
+        className={inputClasses}
         required
       />
-      <button
-        type="submit"
-        disabled={enviando}
-        className="rounded-md bg-[var(--brand)] px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
-      >
+      <Button type="submit" size="sm" disabled={enviando}>
         {enviando ? "Confirmando…" : "Confirmar prazo"}
-      </button>
-      {erro && <span className="text-xs text-red-600">{erro}</span>}
+      </Button>
+      {erro && <span className="text-xs text-danger">{erro}</span>}
     </form>
   );
 }

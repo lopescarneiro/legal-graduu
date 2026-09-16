@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { responderConsulta } from "@/lib/actions/consultas";
+import { Button, inputClasses, cn } from "@/components/ui";
 
 export function ResponderForm({ consultaId }: { consultaId: string }) {
   const router = useRouter();
@@ -30,16 +31,12 @@ export function ResponderForm({ consultaId }: { consultaId: string }) {
         value={resposta}
         onChange={(e) => setResposta(e.target.value)}
         placeholder="Escreva a resposta ao polo…"
-        className="min-h-20 rounded-md border border-black/15 px-3 py-2 text-sm"
+        className={cn(inputClasses, "h-auto min-h-20 py-2")}
       />
-      {erro && <p className="text-sm text-red-600">{erro}</p>}
-      <button
-        type="submit"
-        disabled={enviando}
-        className="self-start rounded-md bg-[var(--brand)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-      >
+      {erro && <p className="text-sm text-danger">{erro}</p>}
+      <Button type="submit" size="sm" disabled={enviando} className="self-start">
         {enviando ? "Enviando…" : "Responder"}
-      </button>
+      </Button>
     </form>
   );
 }

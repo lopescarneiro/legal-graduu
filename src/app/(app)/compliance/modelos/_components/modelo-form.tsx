@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { salvarModelo } from "@/lib/actions/modelos";
 import { TIPOS_CAMPO, CATEGORIAS, type CampoModelo, type TipoCampo } from "@/lib/modelos-constantes";
+import { Card, Button, inputClasses, cn } from "@/components/ui";
 
 export type ModeloInicial = {
   titulo: string;
@@ -22,7 +23,7 @@ function slug(s: string): string {
     .replace(/^_+|_+$/g, "");
 }
 
-const inputCls = "rounded-md border border-black/15 px-3 py-2 text-sm";
+const inputCls = inputClasses;
 
 export function ModeloForm({ modeloId, inicial }: { modeloId?: string; inicial?: ModeloInicial }) {
   const router = useRouter();
@@ -115,23 +116,19 @@ export function ModeloForm({ modeloId, inicial }: { modeloId?: string; inicial?:
       {/* Campos que o polo vai preencher */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Campos a preencher</span>
-          <button
-            type="button"
-            onClick={addCampo}
-            className="rounded-md border border-black/15 px-3 py-1 text-xs hover:bg-black/5"
-          >
+          <span className="text-base font-semibold text-ink">Campos a preencher</span>
+          <Button type="button" variant="secondary" size="sm" onClick={addCampo}>
             + Campo
-          </button>
+          </Button>
         </div>
         {campos.length === 0 && (
-          <p className="text-xs opacity-60">
+          <p className="text-xs text-muted">
             Nenhum campo ainda. Adicione os campos que o polo preencherá (ex.: nome do funcionário,
             salário, data de admissão).
           </p>
         )}
         {campos.map((c, i) => (
-          <div key={i} className="grid grid-cols-1 gap-2 rounded-md border border-black/10 p-2 sm:grid-cols-[1.4fr_1fr_1fr_auto_auto]">
+          <Card key={i} className="grid grid-cols-1 gap-2 p-2 sm:grid-cols-[1.4fr_1fr_1fr_auto_auto]">
             <input
               className={inputCls}
               value={c.rotulo}
@@ -165,51 +162,50 @@ export function ModeloForm({ modeloId, inicial }: { modeloId?: string; inicial?:
               Obrig.
             </label>
             <div className="flex items-center gap-1">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={() => inserirNoCorpo(c.chave)}
-                className="rounded-md border border-black/15 px-2 py-1 text-xs hover:bg-black/5"
                 title="Inserir {{chave}} no corpo"
               >
                 ↩ corpo
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={() => rmCampo(i)}
-                className="rounded-md border border-black/15 px-2 py-1 text-xs text-red-600 hover:bg-black/5"
+                className="text-danger"
               >
                 ✕
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
 
       <label className="flex flex-col gap-1 text-sm">
         Corpo da peça
         <textarea
-          className={`${inputCls} min-h-64 font-mono`}
+          className={cn(inputCls, "h-auto min-h-64 py-2 font-mono")}
           value={corpo}
           onChange={(e) => setCorpo(e.target.value)}
           placeholder="Escreva o texto da peça. Use {{chave}} onde o valor do campo deve entrar."
         />
-        <span className="text-xs opacity-60">
+        <span className="text-xs text-muted">
           Use <code>{"{{chave}}"}</code> para os campos. Ex.: “Contratante: {"{{nome_funcionario}}"}”.
         </span>
       </label>
 
-      {erro && <p className="text-sm text-red-600">{erro}</p>}
+      {erro && <p className="text-sm text-danger">{erro}</p>}
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={salvando}
-          className="rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-        >
+        <Button type="submit" disabled={salvando}>
           {salvando ? "Salvando…" : "Salvar modelo"}
-        </button>
+        </Button>
         <a
           href="/compliance/modelos"
-          className="rounded-md border border-black/15 px-4 py-2 text-sm hover:bg-black/5"
+          className="inline-flex items-center rounded-[var(--r)] border border-line2 bg-card px-4 py-2 text-sm font-medium text-ink hover:bg-canvas2"
         >
           Cancelar
         </a>

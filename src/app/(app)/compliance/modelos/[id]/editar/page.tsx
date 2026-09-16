@@ -14,8 +14,8 @@ export default async function EditarModelo({ params }: { params: Promise<{ id: s
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-semibold">Editar modelo</h1>
-        <p className="text-sm opacity-70">{m.titulo}</p>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Editar modelo</h1>
+        <p className="text-sm text-muted">{m.titulo}</p>
       </div>
       <ModeloForm
         modeloId={m.id}

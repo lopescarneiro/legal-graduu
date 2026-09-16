@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { gerarDocumento } from "@/lib/actions/modelos";
 import type { CampoModelo } from "@/lib/modelos-constantes";
+import { Button, inputClasses, cn } from "@/components/ui";
 
-const inputCls = "rounded-md border border-black/15 px-3 py-2 text-sm";
+const inputCls = inputClasses;
 
 export function PreencherForm({ modeloId, campos }: { modeloId: string; campos: CampoModelo[] }) {
   const [valores, setValores] = useState<Record<string, string>>({});
@@ -45,17 +46,17 @@ export function PreencherForm({ modeloId, campos }: { modeloId: string; campos: 
     <div className="flex flex-col gap-5">
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         {campos.length === 0 && (
-          <p className="text-sm opacity-60">Este modelo não tem campos — apenas gere o documento.</p>
+          <p className="text-sm text-muted">Este modelo não tem campos — apenas gere o documento.</p>
         )}
         {campos.map((c) => (
           <label key={c.chave} className="flex flex-col gap-1 text-sm">
             <span>
               {c.rotulo}
-              {c.obrigatorio && <span className="text-red-600"> *</span>}
+              {c.obrigatorio && <span className="text-danger"> *</span>}
             </span>
             {c.tipo === "textarea" ? (
               <textarea
-                className={`${inputCls} min-h-24`}
+                className={cn(inputCls, "h-auto min-h-24 py-2")}
                 value={valores[c.chave] ?? ""}
                 onChange={(e) => set(c.chave, e.target.value)}
               />
@@ -68,32 +69,24 @@ export function PreencherForm({ modeloId, campos }: { modeloId: string; campos: 
                 onChange={(e) => set(c.chave, e.target.value)}
               />
             )}
-            {c.ajuda && <span className="text-xs opacity-60">{c.ajuda}</span>}
+            {c.ajuda && <span className="text-xs text-muted">{c.ajuda}</span>}
           </label>
         ))}
-        {erro && <p className="text-sm text-red-600">{erro}</p>}
-        <button
-          type="submit"
-          disabled={gerando}
-          className="self-start rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-        >
+        {erro && <p className="text-sm text-danger">{erro}</p>}
+        <Button type="submit" disabled={gerando} className="self-start">
           {gerando ? "Gerando…" : "Gerar documento"}
-        </button>
+        </Button>
       </form>
 
       {conteudo != null && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Documento gerado</span>
-            <button
-              type="button"
-              onClick={copiar}
-              className="rounded-md border border-black/15 px-3 py-1 text-xs hover:bg-black/5"
-            >
+            <span className="text-base font-semibold text-ink">Documento gerado</span>
+            <Button type="button" variant="secondary" size="sm" onClick={copiar}>
               {copiado ? "Copiado!" : "Copiar"}
-            </button>
+            </Button>
           </div>
-          <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-md border border-black/10 bg-black/[0.02] p-4 text-sm">
+          <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-canvas2 p-4 text-sm">
             {conteudo}
           </pre>
         </div>

@@ -3,6 +3,7 @@ import { requireSessao, ehEscritorio, escopoClientes } from "@/lib/session";
 import { board } from "@/lib/funil";
 import { RAMOS, type Ramo } from "@/lib/funil-constantes";
 import { formatBRL } from "@/lib/money";
+import { Card, Badge } from "@/components/ui";
 import { MoverCard } from "./_components/mover-card";
 
 export const dynamic = "force-dynamic";
@@ -28,16 +29,16 @@ export default async function ProcessosPage({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Processos</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Processos</h1>
         <Link
           href="/processos/novo"
-          className="rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white"
+          className="inline-flex items-center rounded-[var(--r)] bg-brand px-4 py-2 text-sm font-semibold text-on-brand shadow-[var(--sh-sm)] hover:brightness-110"
         >
           + Novo processo
         </Link>
       </div>
 
-      <div className="flex gap-2 border-b border-black/10">
+      <div className="flex gap-2 border-b border-line">
         {RAMOS.map((r) => (
           <Link
             key={r.valor}
@@ -45,8 +46,8 @@ export default async function ProcessosPage({
             className={
               "border-b-2 px-3 py-2 text-sm " +
               (r.valor === ramo
-                ? "border-[var(--brand)] font-medium text-[var(--brand)]"
-                : "border-transparent opacity-70 hover:opacity-100")
+                ? "border-brand font-medium text-brand"
+                : "border-transparent text-muted hover:text-ink")
             }
           >
             {r.rotulo}
@@ -55,9 +56,9 @@ export default async function ProcessosPage({
       </div>
 
       {!b ? (
-        <p className="rounded-lg border border-dashed border-black/15 p-6 text-sm opacity-70">
+        <Card className="border-dashed p-6 text-sm text-muted">
           Funil não configurado. Rode o seed (<code>npm run db:seed</code>).
-        </p>
+        </Card>
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-2">
           {b.etapas.map((et) => {
@@ -69,11 +70,11 @@ export default async function ProcessosPage({
                   style={{ borderColor: et.cor }}
                 >
                   <span className="text-sm font-medium">{et.nome}</span>
-                  <span className="text-xs opacity-50">{cards.length}</span>
+                  <span className="text-xs text-muted">{cards.length}</span>
                 </div>
                 <div className="mt-2 flex flex-col gap-2">
                   {cards.map((c) => (
-                    <div key={c.inscricaoId} className="rounded-md border border-black/10 p-2">
+                    <Card key={c.inscricaoId} className="p-2">
                       <div className="flex items-center gap-1">
                         <Link
                           href={`/processos/${c.processoId}`}
@@ -81,19 +82,15 @@ export default async function ProcessosPage({
                         >
                           {c.numeroCnj ?? c.tipoAcao ?? "Processo"}
                         </Link>
-                        {c.pendenteConfirmacao && (
-                          <span className="rounded bg-amber-100 px-1 text-[10px] uppercase text-amber-800">
-                            rascunho
-                          </span>
-                        )}
+                        {c.pendenteConfirmacao && <Badge tone="warn">rascunho</Badge>}
                       </div>
                       {c.valorCausaCents != null && (
-                        <div className="text-xs opacity-60">{formatBRL(c.valorCausaCents)}</div>
+                        <div className="text-xs text-muted">{formatBRL(c.valorCausaCents)}</div>
                       )}
                       {escritorio && (
                         <MoverCard inscricaoId={c.inscricaoId} etapas={etapasSimples} atual={et.id} />
                       )}
-                    </div>
+                    </Card>
                   ))}
                 </div>
               </div>

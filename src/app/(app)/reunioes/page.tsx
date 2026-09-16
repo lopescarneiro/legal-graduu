@@ -6,13 +6,14 @@ import { listarClientes } from "@/lib/clientes";
 import { formatDateTime } from "@/lib/dates";
 import { AgendarForm } from "./_components/agendar-form";
 import { atualizarStatusReuniao } from "@/lib/actions/reunioes";
+import { Card, Badge, Button } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-const STATUS: Record<string, string> = {
-  agendada: "bg-[var(--brand)]/10 text-[var(--brand)]",
-  realizada: "bg-green-100 text-green-800",
-  cancelada: "bg-black/10 text-black/60 line-through",
+const STATUS_TONE: Record<string, "brand" | "success" | "neutral"> = {
+  agendada: "brand",
+  realizada: "success",
+  cancelada: "neutral",
 };
 
 export default async function ReunioesPage() {
@@ -36,28 +37,31 @@ export default async function ReunioesPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-semibold">Reuniões</h1>
-        <p className="text-sm opacity-70">2 reuniões por mês (não cumulativas).</p>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Reuniões</h1>
+        <p className="text-sm text-muted">2 reuniões por mês (não cumulativas).</p>
       </div>
 
       <AgendarForm escritorio={escritorio} clientes={clientes} />
 
       {lista.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-black/15 p-6 text-sm opacity-70">
+        <Card className="border-dashed p-6 text-sm text-muted">
           Nenhuma reunião agendada.
-        </p>
+        </Card>
       ) : (
-        <div className="flex flex-col divide-y divide-black/10 rounded-lg border border-black/10">
+        <Card className="divide-y divide-line">
           {lista.map((r) => (
             <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
               <div>
                 <div className="font-medium">{formatDateTime(r.dataHora)}</div>
-                <div className="text-xs opacity-60">{r.tipo ?? "Reunião"}</div>
+                <div className="text-xs text-muted">{r.tipo ?? "Reunião"}</div>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className={`rounded px-2 py-0.5 text-xs ${STATUS[r.status] ?? ""}`}>
+                <Badge
+                  tone={STATUS_TONE[r.status] ?? "neutral"}
+                  className={r.status === "cancelada" ? "line-through" : undefined}
+                >
                   {r.status}
-                </span>
+                </Badge>
                 {r.status === "agendada" && (
                   <>
                     <form
@@ -66,9 +70,9 @@ export default async function ReunioesPage() {
                         await atualizarStatusReuniao(r.id, "realizada");
                       }}
                     >
-                      <button className="rounded-md border border-black/15 px-3 py-1 hover:bg-black/5">
+                      <Button variant="secondary" size="sm">
                         Realizada
-                      </button>
+                      </Button>
                     </form>
                     <form
                       action={async () => {
@@ -76,16 +80,16 @@ export default async function ReunioesPage() {
                         await atualizarStatusReuniao(r.id, "cancelada");
                       }}
                     >
-                      <button className="rounded-md border border-black/15 px-3 py-1 text-red-600 hover:bg-black/5">
+                      <Button variant="danger" size="sm">
                         Cancelar
-                      </button>
+                      </Button>
                     </form>
                   </>
                 )}
               </div>
             </div>
           ))}
-        </div>
+        </Card>
       )}
     </div>
   );

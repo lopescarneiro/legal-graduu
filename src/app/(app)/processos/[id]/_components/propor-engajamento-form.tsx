@@ -3,8 +3,9 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { proporEngajamento } from "@/lib/actions/engajamentos";
+import { Button, inputClasses } from "@/components/ui";
 
-const inputCls = "rounded-md border border-black/15 px-3 py-2 text-sm";
+const inputCls = inputClasses;
 
 export function ProporEngajamentoForm({ processoId }: { processoId: string }) {
   const router = useRouter();
@@ -33,23 +34,19 @@ export function ProporEngajamentoForm({ processoId }: { processoId: string }) {
     <form
       ref={formRef}
       onSubmit={onSubmit}
-      className="grid grid-cols-1 gap-2 rounded-md border border-black/10 p-3 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-2 rounded-[var(--r-card)] border border-line bg-card p-3 shadow-[var(--sh-sm)] sm:grid-cols-2"
     >
       <input type="hidden" name="processoId" value={processoId} />
       <input name="descricao" className={`${inputCls} sm:col-span-2`} placeholder="Demanda (ex.: Defesa em reclamação trabalhista)" />
       <input name="valor" className={inputCls} placeholder="Valor (R$)" inputMode="decimal" />
       <input name="honorarios" className={inputCls} placeholder="Honorários (descrição)" />
       <input name="exito" className={`${inputCls} sm:col-span-2`} placeholder="Êxito, se houver (ex.: 10% da economia)" />
-      {erro && <p className="text-sm text-red-600 sm:col-span-2">{erro}</p>}
-      {ok && <p className="text-sm text-[var(--success,#16a34a)] sm:col-span-2">{ok}</p>}
+      {erro && <p className="text-sm text-danger sm:col-span-2">{erro}</p>}
+      {ok && <p className="text-sm text-success sm:col-span-2">{ok}</p>}
       <div className="sm:col-span-2">
-        <button
-          type="submit"
-          disabled={enviando}
-          className="rounded-md bg-[var(--brand)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-        >
+        <Button type="submit" size="sm" disabled={enviando}>
           {enviando ? "Enviando…" : "Enviar proposta"}
-        </button>
+        </Button>
       </div>
     </form>
   );

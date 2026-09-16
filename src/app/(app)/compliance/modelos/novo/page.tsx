@@ -8,8 +8,8 @@ export default async function NovoModelo() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-semibold">Novo modelo</h1>
-        <p className="text-sm opacity-70">Defina a peça e os campos que o polo vai preencher.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Novo modelo</h1>
+        <p className="text-sm text-muted">Defina a peça e os campos que o polo vai preencher.</p>
       </div>
       <ModeloForm />
     </div>

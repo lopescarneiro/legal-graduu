@@ -19,6 +19,7 @@ import { ConfirmarPrazo } from "./_components/confirmar-prazo";
 import { AndamentoForm, AudienciaForm, ParteForm } from "./_components/registrar-itens";
 import { ProporEngajamentoForm } from "./_components/propor-engajamento-form";
 import { decidirEngajamento } from "@/lib/actions/engajamentos";
+import { Card, Badge, Button } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -71,57 +72,54 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <a href="/processos" className="text-xs text-[var(--brand)] hover:underline">
+        <a href="/processos" className="text-xs text-brand hover:underline">
           ← Processos
         </a>
-        <h1 className="text-2xl font-semibold">{p.numeroCnj ?? p.tipoAcao ?? "Processo"}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">
+          {p.numeroCnj ?? p.tipoAcao ?? "Processo"}
+        </h1>
         {p.pendenteConfirmacao && (
-          <span className="text-xs text-amber-700">Rascunho — pendente de confirmação</span>
+          <span className="text-xs text-warn">Rascunho — pendente de confirmação</span>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {campos.map((c) => (
-          <div key={c.rotulo} className="rounded-lg border border-black/10 p-3">
-            <div className="text-xs opacity-60">{c.rotulo}</div>
+          <Card key={c.rotulo} className="p-3">
+            <div className="text-xs text-muted">{c.rotulo}</div>
             <div className="text-sm font-medium">{c.valor}</div>
-          </div>
+          </Card>
         ))}
       </div>
 
       {ehEscritorio(s) && p.segredoJustica && (
-        <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
+        <Card className="border-danger/40 bg-danger-tint px-3 py-2 text-sm text-danger">
           Processo em segredo de justiça.
-        </div>
+        </Card>
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Prazos</h2>
+        <h2 className="text-base font-semibold text-ink">Prazos</h2>
         {escritorio && <NovoPrazoForm processoId={p.id} />}
         {listaPrazos.length === 0 ? (
-          <p className="text-sm opacity-60">Nenhum prazo registrado.</p>
+          <Card className="p-6 text-sm text-muted">Nenhum prazo registrado.</Card>
         ) : (
-          <div className="flex flex-col divide-y divide-black/10 rounded-lg border border-black/10">
+          <Card className="flex flex-col divide-y divide-line">
             {listaPrazos.map((pz) => {
               const validado = !!pz.validadoEm;
               const fatal = pz.tipo === "fatal_peremptorio";
               return (
                 <div key={pz.id} className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={
-                        "rounded px-1.5 py-0.5 text-[10px] uppercase " +
-                        (fatal ? "bg-red-100 text-red-800" : "bg-black/10 text-black/70")
-                      }
-                    >
+                    <Badge tone={fatal ? "danger" : "neutral"}>
                       {fatal ? "fatal" : "dilatório"}
-                    </span>
+                    </Badge>
                     <span className="font-medium">{pz.descricao ?? "Prazo"}</span>
                   </div>
                   {validado ? (
                     <div className="mt-1 text-sm">
-                      <span className="text-green-700">✓ Vence {formatDate(pz.dataVencimento)}</span>
-                      <span className="ml-2 text-xs opacity-50">
+                      <span className="text-success">✓ Vence {formatDate(pz.dataVencimento)}</span>
+                      <span className="ml-2 text-xs text-muted">
                         validado {formatDateTime(pz.validadoEm)}
                       </span>
                     </div>
@@ -133,14 +131,12 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
                           {pz.dataSugerida ? formatDate(pz.dataSugerida) : "— (cálculo manual)"}
                         </span>
                         {pz.nivelConfianca != null && (
-                          <span className="text-xs opacity-60">confiança {pz.nivelConfianca}%</span>
+                          <span className="text-xs text-muted">confiança {pz.nivelConfianca}%</span>
                         )}
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] uppercase text-amber-800">
-                          confira
-                        </span>
+                        <Badge tone="warn">confira</Badge>
                       </div>
                       {(pz.motivosIncerteza?.length ?? 0) > 0 && (
-                        <ul className="mt-1 list-disc pl-5 text-xs opacity-60">
+                        <ul className="mt-1 list-disc pl-5 text-xs text-muted">
                           {pz.motivosIncerteza!.map((m, i) => (
                             <li key={i}>{m}</li>
                           ))}
@@ -152,35 +148,34 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
                 </div>
               );
             })}
-          </div>
+          </Card>
         )}
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Honorários (contencioso)</h2>
+        <h2 className="text-base font-semibold text-ink">Honorários (contencioso)</h2>
         {escritorio && <ProporEngajamentoForm processoId={p.id} />}
         {listaEngajamentos.length === 0 ? (
-          <p className="text-sm opacity-60">Nenhuma proposta.</p>
+          <Card className="p-6 text-sm text-muted">Nenhuma proposta.</Card>
         ) : (
-          <div className="flex flex-col divide-y divide-black/10 rounded-lg border border-black/10">
+          <Card className="flex flex-col divide-y divide-line">
             {listaEngajamentos.map((e) => (
               <div key={e.id} className="px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-medium">{e.descricao}</span>
-                  <span
-                    className={
-                      "rounded px-2 py-0.5 text-xs " +
-                      (e.status === "aceito"
-                        ? "bg-green-100 text-green-800"
+                  <Badge
+                    tone={
+                      e.status === "aceito"
+                        ? "success"
                         : e.status === "recusado"
-                          ? "bg-black/10 text-black/60"
-                          : "bg-amber-100 text-amber-800")
+                          ? "neutral"
+                          : "warn"
                     }
                   >
                     {e.status}
-                  </span>
+                  </Badge>
                 </div>
-                <div className="mt-1 text-sm opacity-70">
+                <div className="mt-1 text-sm text-muted">
                   {e.valorCents != null && <span>{formatBRL(e.valorCents)}</span>}
                   {e.honorariosDescricao && <span> · {e.honorariosDescricao}</span>}
                   {e.exitoDescricao && <span> · êxito: {e.exitoDescricao}</span>}
@@ -193,9 +188,9 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
                         await decidirEngajamento(e.id, true);
                       }}
                     >
-                      <button className="rounded-md bg-[var(--brand)] px-3 py-1 text-sm text-white">
+                      <Button type="submit" size="sm">
                         Aceitar
-                      </button>
+                      </Button>
                     </form>
                     <form
                       action={async () => {
@@ -203,71 +198,68 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
                         await decidirEngajamento(e.id, false);
                       }}
                     >
-                      <button className="rounded-md border border-black/15 px-3 py-1 text-sm">
+                      <Button type="submit" size="sm" variant="secondary">
                         Recusar
-                      </button>
+                      </Button>
                     </form>
                   </div>
                 )}
               </div>
             ))}
-          </div>
+          </Card>
         )}
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Audiências</h2>
+        <h2 className="text-base font-semibold text-ink">Audiências</h2>
         {escritorio && <AudienciaForm processoId={p.id} />}
         {listaAudiencias.length === 0 ? (
-          <p className="text-sm opacity-60">Nenhuma audiência.</p>
+          <Card className="p-6 text-sm text-muted">Nenhuma audiência.</Card>
         ) : (
-          <div className="flex flex-col divide-y divide-black/10 rounded-lg border border-black/10">
+          <Card className="flex flex-col divide-y divide-line">
             {listaAudiencias.map((a) => (
               <div key={a.id} className="px-4 py-2 text-sm">
                 <span className="font-medium">{formatDateTime(a.dataHora)}</span> · {a.tipo} ·{" "}
                 {a.modalidade}
-                {a.vara && <span className="opacity-60"> · {a.vara}</span>}
-                {a.prepostoNome && <span className="opacity-60"> · preposto: {a.prepostoNome}</span>}
+                {a.vara && <span className="text-muted"> · {a.vara}</span>}
+                {a.prepostoNome && <span className="text-muted"> · preposto: {a.prepostoNome}</span>}
               </div>
             ))}
-          </div>
+          </Card>
         )}
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Andamentos</h2>
+        <h2 className="text-base font-semibold text-ink">Andamentos</h2>
         {escritorio && <AndamentoForm processoId={p.id} />}
         {listaAndamentos.length === 0 ? (
-          <p className="text-sm opacity-60">Nenhum andamento.</p>
+          <Card className="p-6 text-sm text-muted">Nenhum andamento.</Card>
         ) : (
-          <div className="flex flex-col divide-y divide-black/10 rounded-lg border border-black/10">
+          <Card className="flex flex-col divide-y divide-line">
             {listaAndamentos.map((a) => (
               <div key={a.id} className="px-4 py-2 text-sm">
-                <span className="opacity-60">{formatDate(a.data)}</span> — {a.descricao}
+                <span className="text-muted">{formatDate(a.data)}</span> — {a.descricao}
               </div>
             ))}
-          </div>
+          </Card>
         )}
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Partes</h2>
+        <h2 className="text-base font-semibold text-ink">Partes</h2>
         {escritorio && <ParteForm processoId={p.id} />}
         {listaPartes.length === 0 ? (
-          <p className="text-sm opacity-60">Nenhuma parte.</p>
+          <Card className="p-6 text-sm text-muted">Nenhuma parte.</Card>
         ) : (
-          <div className="flex flex-col divide-y divide-black/10 rounded-lg border border-black/10">
+          <Card className="flex flex-col divide-y divide-line">
             {listaPartes.map((pt) => (
               <div key={pt.id} className="px-4 py-2 text-sm">
-                <span className="rounded bg-black/10 px-1.5 py-0.5 text-[10px] uppercase">
-                  {pt.papel}
-                </span>{" "}
-                {pt.nome}
-                {pt.cpfCnpj && <span className="opacity-60"> · {pt.cpfCnpj}</span>}
-                {pt.ehPolo && <span className="ml-1 text-[10px] text-[var(--brand)]">(polo)</span>}
+                <Badge tone="neutral">{pt.papel}</Badge> {pt.nome}
+                {pt.cpfCnpj && <span className="text-muted"> · {pt.cpfCnpj}</span>}
+                {pt.ehPolo && <span className="ml-1 text-[10px] text-brand">(polo)</span>}
               </div>
             ))}
-          </div>
+          </Card>
         )}
       </section>
     </div>
