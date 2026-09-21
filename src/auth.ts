@@ -1,6 +1,8 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
+import { db } from "@/db";
+import { clientes } from "@/db/schema";
 import { authConfig } from "./auth.config";
 
 /**
@@ -67,6 +69,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const vinc = Array.isArray(data.vinculos) ? data.vinculos : [];
         const papeis = [...new Set(vinc.map((v) => v.papelOrg).filter((x): x is string => !!x))];
 
+        // POLO (cliente): tenant = a org do Hub. Escritório/superadmin: null (cross-cliente).
+        const clienteId =
+          data.usuario.escritorio || data.usuario.superAdmin
+            ? null
+            : (data.usuario.orgId ?? null);
+
+        // Provisiona o polo como cliente/tenant na 1ª entrada (best-effort; o
+        // escritório ajusta nome/telefone na tela de Clientes). onConflictDoNothing
+        // preserva um cadastro já existente.
+        if (clienteId) {
+          try {
+            await db
+              .insert(clientes)
+              .values({ id: clienteId, nome: "Polo (defina o nome)" })
+              .onConflictDoNothing();
+          } catch {
+            // provisionamento não bloqueia o login
+          }
+        }
+
         return {
           id: data.usuario.idGlobal,
           email: data.usuario.email ?? "",
@@ -74,11 +96,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           nome: data.usuario.nome ?? null,
           superAdmin: !!data.usuario.superAdmin,
           escritorio: !!data.usuario.escritorio,
-          // POLO (cliente): tenant = a org do Hub. Escritório/superadmin: null (cross-cliente).
-          clienteId:
-            data.usuario.escritorio || data.usuario.superAdmin
-              ? null
-              : (data.usuario.orgId ?? null),
+          clienteId,
           papeis,
           impersonando: !!data.impersonadoPor,
           idGlobal: data.usuario.idGlobal,
