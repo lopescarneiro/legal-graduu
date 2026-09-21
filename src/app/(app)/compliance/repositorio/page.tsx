@@ -10,6 +10,7 @@ import { formatDate } from "@/lib/dates";
 import { Card, Badge, type BadgeProps } from "@/components/ui";
 import { UploadForm } from "./_components/upload-form";
 import { AvaliacaoDoc } from "./_components/avaliacao-doc";
+import { DocAcoes } from "./_components/doc-acoes";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +130,12 @@ export default async function Repositorio() {
                               />
                             );
                           })()}
+                        <DocAcoes
+                          documentoId={d.id}
+                          nome={d.nome}
+                          status={d.status}
+                          escritorio={escritorio}
+                        />
                       </div>
                       <a
                         href={`/api/documentos/${d.id}`}

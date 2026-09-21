@@ -84,6 +84,74 @@ export async function uploadDocumento(formData: FormData): Promise<ActionResult>
   return { ok: true, message: "Documento enviado." };
 }
 
+const STATUS_DOC = ["em_dia", "a_vencer", "pendente", "nao_avaliado"] as const;
+
+/** Validação HUMANA da conformidade do documento (só o escritório carimba). */
+export async function validarDocumento(id: string, status: string): Promise<ActionResult> {
+  const s = await requireSessao();
+  if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+  if (!ehEscritorio(s)) return { ok: false, error: "Apenas o escritório valida a conformidade." };
+  if (!STATUS_DOC.includes(status as (typeof STATUS_DOC)[number])) {
+    return { ok: false, error: "Status inválido." };
+  }
+  const esc = escopoClientes(s);
+  if (esc && esc.length === 0) return { ok: false, error: "Sem acesso." };
+  const [d] = await db
+    .select({ clienteId: documentos.clienteId })
+    .from(documentos)
+    .where(and(eq(documentos.id, id), esc ? inArray(documentos.clienteId, esc) : undefined))
+    .limit(1);
+  if (!d) return { ok: false, error: "Documento não encontrado." };
+
+  await db
+    .update(documentos)
+    .set({ status: status as (typeof STATUS_DOC)[number], atualizadoEm: new Date() })
+    .where(eq(documentos.id, id));
+  await registrarAudit({
+    acao: "write",
+    entidade: "documento_validacao",
+    entidadeId: id,
+    clienteId: d.clienteId,
+    atorId: s.id,
+    atorPapel: "escritorio",
+    detalhe: { status },
+  });
+  revalidatePath("/compliance/repositorio");
+  return { ok: true, message: "Conformidade atualizada." };
+}
+
+/** Renomeia um documento (dono do escopo). */
+export async function renomearDocumento(id: string, nome: string): Promise<ActionResult> {
+  const s = await requireSessao();
+  if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+  const nomeT = nome.trim();
+  if (!nomeT) return { ok: false, error: "Informe um nome." };
+  const esc = escopoClientes(s);
+  if (esc && esc.length === 0) return { ok: false, error: "Sem acesso." };
+  const [d] = await db
+    .select({ clienteId: documentos.clienteId })
+    .from(documentos)
+    .where(and(eq(documentos.id, id), esc ? inArray(documentos.clienteId, esc) : undefined))
+    .limit(1);
+  if (!d) return { ok: false, error: "Documento não encontrado." };
+
+  await db
+    .update(documentos)
+    .set({ nome: nomeT.slice(0, 200), atualizadoEm: new Date() })
+    .where(eq(documentos.id, id));
+  await registrarAudit({
+    acao: "write",
+    entidade: "documento",
+    entidadeId: id,
+    clienteId: d.clienteId,
+    atorId: s.id,
+    atorPapel: ehEscritorio(s) ? "escritorio" : "polo",
+    detalhe: { renomeado: nomeT },
+  });
+  revalidatePath("/compliance/repositorio");
+  return { ok: true, message: "Documento renomeado." };
+}
+
 /**
  * Avaliação ADVISORY de um documento por IA. Barra documento sigiloso/sensível
  * (LGPD art. 33 — sem transferência internacional de dado sob sigilo). Nunca

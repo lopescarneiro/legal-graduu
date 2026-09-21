@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { modelos, modeloGeracoes } from "@/db/schema";
+import { modelos, modeloGeracoes, documentos } from "@/db/schema";
 import { requireSessao, requireEscritorio, somenteLeitura } from "@/lib/session";
 import { preencherCorpo } from "@/lib/modelos";
+import { gerarDocx, slugArquivo, FORMATO_MIME } from "@/lib/documento-export";
+import { guardarArquivo } from "@/lib/storage";
 import { registrarAudit } from "@/lib/audit";
 import type { ActionResult } from "@/lib/actions/result";
 
@@ -106,16 +108,53 @@ export async function gerarDocumento(
   }
 
   const conteudo = preencherCorpo(m.corpo, valores);
+  const clienteId = s.clienteId ?? null;
   const [geracao] = await db
     .insert(modeloGeracoes)
     .values({
       modeloId,
-      clienteId: s.clienteId ?? null,
+      clienteId,
       valores,
       conteudoGerado: conteudo,
       criadoPorId: s.id,
     })
     .returning({ id: modeloGeracoes.id });
+
+  // Materializa o gerado no repositório (só quando vinculado a um cliente — o
+  // preview do escritório tem clienteId null). Best-effort: não derruba a geração.
+  if (clienteId && geracao?.id) {
+    try {
+      const bytes = await gerarDocx(m.titulo, conteudo);
+      const chave = await guardarArquivo(
+        clienteId,
+        `${slugArquivo(m.titulo)}.docx`,
+        Buffer.from(bytes),
+        FORMATO_MIME.docx,
+      );
+      const [doc] = await db
+        .insert(documentos)
+        .values({
+          clienteId,
+          categoria: m.categoria,
+          nome: m.titulo,
+          arquivoPath: chave,
+          mime: FORMATO_MIME.docx,
+          tamanhoBytes: bytes.length,
+          uploadedByTipo: s.escritorio ? "escritorio" : "polo",
+          uploadedById: s.id,
+          status: "nao_avaliado",
+        })
+        .returning({ id: documentos.id });
+      if (doc?.id) {
+        await db
+          .update(modeloGeracoes)
+          .set({ documentoId: doc.id })
+          .where(eq(modeloGeracoes.id, geracao.id));
+      }
+    } catch {
+      // storage/docx indisponível — o documento gerado ainda existe (texto).
+    }
+  }
   await registrarAudit({
     acao: "write",
     entidade: "modelo_geracao",
