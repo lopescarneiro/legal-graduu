@@ -7,3 +7,8 @@ import { clientes } from "@/db/schema";
 export async function listarClientes() {
   return db.select({ id: clientes.id, nome: clientes.nome }).from(clientes).orderBy(asc(clientes.nome));
 }
+
+/** Carteira completa (tela de Clientes do escritório). */
+export async function listarClientesCompleto() {
+  return db.select().from(clientes).orderBy(asc(clientes.nome));
+}
