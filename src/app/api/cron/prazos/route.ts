@@ -33,7 +33,7 @@ export async function GET(req: Request) {
     })
     .from(prazos)
     .innerJoin(processos, eq(processos.id, prazos.processoId))
-    .innerJoin(clientes, eq(clientes.id, prazos.clienteId))
+    .leftJoin(clientes, eq(clientes.id, prazos.clienteId))
     .where(
       and(
         isNotNull(prazos.validadoEm),
@@ -46,12 +46,20 @@ export async function GET(req: Request) {
     );
 
   let enviados = 0;
+  let semCanal = 0;
   for (const p of pendentes) {
     const texto = `Lembrete de prazo: ${p.descricao ?? "prazo"} (processo ${p.numeroCnj ?? ""}) vence em ${formatDate(p.dataVencimento)}.`;
-    const ok = await enviarWhatsapp(p.telefone, texto);
-    await db.update(prazos).set({ lembreteEnviadoEm: new Date() }).where(eq(prazos.id, p.id));
-    if (ok) enviados++;
+    // Só marca como enviado quando o envio REALMENTE ocorreu. Sem telefone/canal
+    // ou em falha, o prazo NÃO é consumido — reprocessa na próxima passada
+    // (nunca perder o alerta de um prazo fatal por um no-op do Atende).
+    const ok = p.telefone ? await enviarWhatsapp(p.telefone, texto) : false;
+    if (ok) {
+      await db.update(prazos).set({ lembreteEnviadoEm: new Date() }).where(eq(prazos.id, p.id));
+      enviados++;
+    } else {
+      semCanal++;
+    }
   }
 
-  return NextResponse.json({ ok: true, verificados: pendentes.length, enviados });
+  return NextResponse.json({ ok: true, verificados: pendentes.length, enviados, pendentesReprocessar: semCanal });
 }

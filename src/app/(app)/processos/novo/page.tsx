@@ -1,4 +1,4 @@
-import { requireSessao, ehEscritorio } from "@/lib/session";
+import { requireEscritorio } from "@/lib/session";
 import { listarClientes } from "@/lib/clientes";
 import { iaConfigurada } from "@/lib/ia";
 import { NovoProcessoForm } from "../_components/novo-processo-form";
@@ -6,9 +6,9 @@ import { NovoProcessoForm } from "../_components/novo-processo-form";
 export const dynamic = "force-dynamic";
 
 export default async function NovoProcesso() {
-  const s = await requireSessao();
-  const escritorio = ehEscritorio(s);
-  const clientes = escritorio ? await listarClientes() : [];
+  // Abrir processo é ato do escritório — o polo é redirecionado para "/".
+  await requireEscritorio();
+  const clientes = await listarClientes();
 
   return (
     <div className="flex flex-col gap-5">
@@ -21,7 +21,7 @@ export default async function NovoProcesso() {
           Registre o processo — ele entra no funil do ramo, na primeira etapa.
         </p>
       </div>
-      <NovoProcessoForm escritorio={escritorio} clientes={clientes} iaDisponivel={iaConfigurada()} />
+      <NovoProcessoForm escritorio clientes={clientes} iaDisponivel={iaConfigurada()} />
     </div>
   );
 }

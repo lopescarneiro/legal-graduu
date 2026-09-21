@@ -95,6 +95,9 @@ export async function avaliarDocumentoIA(
 ): Promise<ActionResult & { avaliacao?: AvaliacaoDocumento }> {
   const s = await requireSessao();
   if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+  // A avaliação por IA (parecer/score de triagem) é INTERNA do escritório — o polo
+  // nunca dispara nem vê (OAB L1). Defesa em profundidade: a UI também esconde.
+  if (!ehEscritorio(s)) return { ok: false, error: "Apenas o escritório avalia com IA." };
   if (!iaConfigurada()) return { ok: false, error: "Avaliação por IA indisponível." };
 
   const esc = escopoClientes(s);

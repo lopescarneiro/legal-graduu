@@ -1,5 +1,14 @@
 import "server-only";
+import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
+
+/** Comparação em tempo constante (regra de ouro S2S). */
+function seguroIgual(a: string, b: string): boolean {
+  const ba = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ba.length !== bb.length) return false;
+  return timingSafeEqual(ba, bb);
+}
 
 /**
  * Autoriza um endpoint de cron — FAIL-CLOSED.
@@ -13,7 +22,7 @@ export function autorizarCron(req: Request): NextResponse | null {
   if (!secret) {
     return NextResponse.json({ ok: false, error: "cron_nao_configurado" }, { status: 503 });
   }
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!seguroIgual(req.headers.get("authorization") ?? "", `Bearer ${secret}`)) {
     return NextResponse.json({ ok: false, error: "nao_autorizado" }, { status: 401 });
   }
   return null;

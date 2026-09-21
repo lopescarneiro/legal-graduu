@@ -2,7 +2,7 @@ import Link from "next/link";
 import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { prazos, processos } from "@/db/schema";
-import { requireSessao, escopoClientes } from "@/lib/session";
+import { requireSessao, escopoClientes, ehEscritorio } from "@/lib/session";
 import { formatDate } from "@/lib/dates";
 import { Card, Badge } from "@/components/ui";
 
@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PrazosPage() {
   const s = await requireSessao();
+  const escritorio = ehEscritorio(s);
   const esc = escopoClientes(s);
   const semAcesso = !!esc && esc.length === 0;
 
@@ -39,6 +40,10 @@ export default async function PrazosPage() {
         )
         .orderBy(asc(prazos.dataVencimento));
 
+  // O polo só vê prazos JÁ VALIDADOS pelo escritório (nunca a sugestão da máquina,
+  // a confiança, os motivos de incerteza ou o banner de fatais pendentes).
+  const visiveis = escritorio ? lista : lista.filter((p) => !!p.validadoEm);
+
   const fataisNaoConfirmados = lista.filter(
     (p) => p.tipo === "fatal_peremptorio" && !p.validadoEm,
   ).length;
@@ -47,22 +52,26 @@ export default async function PrazosPage() {
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-ink">Prazos</h1>
-        <p className="text-sm text-muted">Prazos em aberto. Fatais não confirmados ficam em destaque.</p>
+        <p className="text-sm text-muted">
+          {escritorio
+            ? "Prazos em aberto. Fatais não confirmados ficam em destaque."
+            : "Seus prazos confirmados pelo escritório."}
+        </p>
       </div>
 
-      {fataisNaoConfirmados > 0 && (
+      {escritorio && fataisNaoConfirmados > 0 && (
         <div className="rounded-md bg-danger-tint px-4 py-3 text-sm text-danger">
           ⚠️ {fataisNaoConfirmados} prazo(s) <strong>fatal(is)</strong> aguardando confirmação humana.
         </div>
       )}
 
-      {lista.length === 0 ? (
+      {visiveis.length === 0 ? (
         <Card className="border-dashed p-6 text-sm text-muted">
           Nenhum prazo em aberto.
         </Card>
       ) : (
         <Card className="divide-y divide-line">
-          {lista.map((p) => {
+          {visiveis.map((p) => {
             const fatal = p.tipo === "fatal_peremptorio";
             const validado = !!p.validadoEm;
             return (

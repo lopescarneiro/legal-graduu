@@ -23,8 +23,12 @@ export function formatNumber(cents: number | null | undefined): string {
 
 /**
  * Converte um texto digitado pelo usuário em centavos.
- * Aceita "1.234,56", "1234,56", "1234.56", "R$ 1.234,56" e retorna 123456.
+ * Aceita "1.234,56", "1234,56", "1234.56", "1.500", "R$ 1.234,56" e retorna centavos.
  * Retorna null quando não consegue interpretar.
+ *
+ * Regra do ponto sem vírgula (pt-BR): "1.500" e "1.234.567" são MILHAR, não decimal.
+ * Só tratamos o ponto como decimal quando há exatamente 2 dígitos após um único ponto
+ * (ex.: "1234.56") — o caso típico de quem digitou no padrão internacional.
  */
 export function parseBRLToCents(input: string | number | null | undefined): number | null {
   if (input === null || input === undefined) return null;
@@ -33,12 +37,18 @@ export function parseBRLToCents(input: string | number | null | undefined): numb
   }
   let s = input.trim();
   if (!s) return null;
-  s = s.replace(/[R$\s ]/g, "");
-  if (s.includes(",") && s.includes(".")) {
-    // pt-BR: ponto = milhar, vírgula = decimal
+  s = s.replace(/[R$\s]/g, "");
+  if (s.includes(",")) {
+    // vírgula = decimal; pontos = milhar
     s = s.replace(/\./g, "").replace(",", ".");
-  } else if (s.includes(",")) {
-    s = s.replace(",", ".");
+  } else if (s.includes(".")) {
+    const partes = s.split(".");
+    const ultima = partes[partes.length - 1];
+    // >1 ponto OU último grupo != 2 dígitos ⇒ pontos são separador de milhar.
+    if (partes.length > 2 || ultima.length !== 2) {
+      s = partes.join("");
+    }
+    // senão: mantém como decimal (ex.: "1234.56").
   }
   const value = Number(s);
   if (!Number.isFinite(value)) return null;

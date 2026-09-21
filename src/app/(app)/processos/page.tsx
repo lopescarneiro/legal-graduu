@@ -30,12 +30,14 @@ export default async function ProcessosPage({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight text-ink">Processos</h1>
-        <Link
-          href="/processos/novo"
-          className="inline-flex items-center rounded-[var(--r)] bg-brand px-4 py-2 text-sm font-semibold text-on-brand shadow-[var(--sh-sm)] hover:brightness-110"
-        >
-          + Novo processo
-        </Link>
+        {escritorio && (
+          <Link
+            href="/processos/novo"
+            className="inline-flex items-center rounded-[var(--r)] bg-brand px-4 py-2 text-sm font-semibold text-on-brand shadow-[var(--sh-sm)] hover:brightness-110"
+          >
+            + Novo processo
+          </Link>
+        )}
       </div>
 
       <div className="flex gap-2 border-b border-line">

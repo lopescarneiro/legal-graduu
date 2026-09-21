@@ -59,18 +59,15 @@ export async function criarProcesso(
 ): Promise<ActionResult & { id?: string }> {
   const s = await requireSessao();
   if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+  // Abrir processo é ato do ESCRITÓRIO (todas as demais mutações de processo já são
+  // escritório-only). O polo não abre processo pleno no funil.
+  if (!ehEscritorio(s)) return { ok: false, error: "Apenas o escritório abre processos." };
 
   const ramo = String(formData.get("ramo") || "") as Ramo;
   if (!RAMOS.includes(ramo)) return { ok: false, error: "Ramo inválido." };
 
-  let clienteId: string | null;
-  if (ehEscritorio(s)) {
-    clienteId = String(formData.get("clienteId") || "").trim() || null;
-    if (!clienteId) return { ok: false, error: "Selecione o cliente." };
-  } else {
-    clienteId = s.clienteId;
-    if (!clienteId) return { ok: false, error: "Sessão sem cliente." };
-  }
+  const clienteId = String(formData.get("clienteId") || "").trim() || null;
+  if (!clienteId) return { ok: false, error: "Selecione o cliente." };
 
   const numeroCnj = String(formData.get("numeroCnj") || "").trim() || null;
   const tipoAcao = String(formData.get("tipoAcao") || "").trim() || null;

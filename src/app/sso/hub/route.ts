@@ -18,7 +18,10 @@ export async function GET(req: Request) {
   } catch {
     return NextResponse.redirect(new URL("/login?erro=sso", url));
   }
-  // `next` é sempre relativo (evita open-redirect).
-  const destino = next.startsWith("/") ? next : "/";
+  // `next` precisa ser um caminho relativo same-origin. Rejeita "//host" e "/\host"
+  // (que new URL resolveria para host externo) — evita open-redirect.
+  const relativoSeguro =
+    next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\");
+  const destino = relativoSeguro ? next : "/";
   return NextResponse.redirect(new URL(destino, url));
 }

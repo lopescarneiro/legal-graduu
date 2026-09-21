@@ -123,7 +123,7 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
                         validado {formatDateTime(pz.validadoEm)}
                       </span>
                     </div>
-                  ) : (
+                  ) : escritorio ? (
                     <div className="mt-1 text-sm">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">
@@ -142,8 +142,10 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
                           ))}
                         </ul>
                       )}
-                      {escritorio && <ConfirmarPrazo prazoId={pz.id} sugerida={pz.dataSugerida} />}
+                      <ConfirmarPrazo prazoId={pz.id} sugerida={pz.dataSugerida} />
                     </div>
+                  ) : (
+                    <div className="mt-1 text-sm text-muted">Prazo em análise pelo escritório.</div>
                   )}
                 </div>
               );

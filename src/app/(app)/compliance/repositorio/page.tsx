@@ -37,15 +37,17 @@ export default async function Repositorio() {
     porCategoria.set(d.categoria, arr);
   }
 
-  const iaDisponivel = iaConfigurada();
+  // IA (parecer/score) é INTERNA do escritório — polo não dispara nem vê (OAB L1).
+  const iaDisponivel = iaConfigurada() && escritorio;
   const docIds = docs.map((d) => d.id);
-  const avaliacoes = docIds.length
-    ? await db
-        .select()
-        .from(documentoAvaliacoes)
-        .where(inArray(documentoAvaliacoes.documentoId, docIds))
-        .orderBy(desc(documentoAvaliacoes.criadoEm))
-    : [];
+  const avaliacoes =
+    escritorio && docIds.length
+      ? await db
+          .select()
+          .from(documentoAvaliacoes)
+          .where(inArray(documentoAvaliacoes.documentoId, docIds))
+          .orderBy(desc(documentoAvaliacoes.criadoEm))
+      : [];
   const ultimaAval = new Map<string, AvaliacaoDocumento>();
   for (const a of avaliacoes) {
     if (!ultimaAval.has(a.documentoId)) {
@@ -115,17 +117,18 @@ export default async function Repositorio() {
                           <Badge tone={st.tone}>{st.rotulo}</Badge>
                           {d.vencimentoEm && <span>vence {formatDate(d.vencimentoEm)}</span>}
                         </div>
-                        {(() => {
-                          const el = elegibilidade(d);
-                          return (
-                            <AvaliacaoDoc
-                              documentoId={d.id}
-                              elegivel={el.elegivel}
-                              motivo={el.motivo}
-                              inicial={ultimaAval.get(d.id) ?? null}
-                            />
-                          );
-                        })()}
+                        {escritorio &&
+                          (() => {
+                            const el = elegibilidade(d);
+                            return (
+                              <AvaliacaoDoc
+                                documentoId={d.id}
+                                elegivel={el.elegivel}
+                                motivo={el.motivo}
+                                inicial={ultimaAval.get(d.id) ?? null}
+                              />
+                            );
+                          })()}
                       </div>
                       <a
                         href={`/api/documentos/${d.id}`}
