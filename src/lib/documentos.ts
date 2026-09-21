@@ -12,6 +12,13 @@ export async function listarDocumentos(s: Sessao) {
   return db
     .select()
     .from(documentos)
-    .where(and(cerca, isNull(documentos.processoId)))
+    .where(
+      and(
+        cerca,
+        isNull(documentos.processoId),
+        isNull(documentos.substituidoPorId), // só a versão atual
+        isNull(documentos.arquivadoEm), // não arquivado
+      ),
+    )
     .orderBy(asc(documentos.categoria), desc(documentos.criadoEm));
 }

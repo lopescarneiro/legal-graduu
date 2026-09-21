@@ -113,6 +113,10 @@ export const documentos = pgTable(
     mime: text("mime"),
     tamanhoBytes: integer("tamanho_bytes"),
     versao: integer("versao").notNull().default(1),
+    // Versionamento: aponta para a versão que substituiu esta (null = versão atual).
+    substituidoPorId: uuid("substituido_por_id"),
+    // Soft-delete: != null = arquivado (sai das listagens, preserva trilha).
+    arquivadoEm: timestamp("arquivado_em", { withTimezone: true }),
     status: statusDocumentoEnum("status").notNull().default("nao_avaliado"),
     sigilo: sigiloEnum("sigilo").notNull().default("normal"),
     contemDadosSensiveis: boolean("contem_dados_sensiveis").notNull().default(false),

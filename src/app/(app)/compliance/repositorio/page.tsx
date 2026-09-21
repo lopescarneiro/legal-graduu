@@ -134,6 +134,7 @@ export default async function Repositorio() {
                           documentoId={d.id}
                           nome={d.nome}
                           status={d.status}
+                          versao={d.versao}
                           escritorio={escritorio}
                         />
                       </div>

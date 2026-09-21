@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
   processos,
@@ -76,7 +76,7 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
   const listaPecas = await db
     .select()
     .from(documentos)
-    .where(eq(documentos.processoId, p.id))
+    .where(and(eq(documentos.processoId, p.id), isNull(documentos.arquivadoEm)))
     .orderBy(desc(documentos.criadoEm));
 
   const campos: { rotulo: string; valor: string }[] = [

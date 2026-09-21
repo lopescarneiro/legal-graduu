@@ -45,6 +45,21 @@ export async function uploadDocumento(formData: FormData): Promise<ActionResult>
     if (!clienteId) return { ok: false, error: "Sessão sem cliente." };
   }
 
+  // Versionamento: se veio "substituiId", a nova versão sucede a anterior.
+  const substituiId = String(formData.get("substituiId") || "").trim() || null;
+  let versao = 1;
+  if (substituiId) {
+    const [prev] = await db
+      .select({ versao: documentos.versao, clienteId: documentos.clienteId })
+      .from(documentos)
+      .where(eq(documentos.id, substituiId))
+      .limit(1);
+    if (!prev || prev.clienteId !== clienteId) {
+      return { ok: false, error: "Documento a substituir não encontrado." };
+    }
+    versao = (prev.versao ?? 1) + 1;
+  }
+
   const bytes = Buffer.from(await arquivo.arrayBuffer());
   let chave: string;
   try {
@@ -62,6 +77,7 @@ export async function uploadDocumento(formData: FormData): Promise<ActionResult>
       arquivoPath: chave,
       mime: arquivo.type || null,
       tamanhoBytes: bytes.length,
+      versao,
       sigilo: sigilo as (typeof SIGILOS)[number],
       contemDadosSensiveis: sigilo !== "normal",
       vencimentoEm: vencimento,
@@ -70,6 +86,11 @@ export async function uploadDocumento(formData: FormData): Promise<ActionResult>
       status: "nao_avaliado",
     })
     .returning({ id: documentos.id });
+
+  // Marca a versão anterior como substituída (sai da listagem; vira histórico).
+  if (substituiId && row?.id) {
+    await db.update(documentos).set({ substituidoPorId: row.id }).where(eq(documentos.id, substituiId));
+  }
 
   await registrarAudit({
     acao: "write",
@@ -157,6 +178,70 @@ export async function anexarPeca(formData: FormData): Promise<ActionResult> {
   return { ok: true, message: "Peça anexada." };
 }
 
+/** Sobe uma NOVA VERSÃO de um documento (herda metadados; supersede a anterior). */
+export async function substituirDocumento(formData: FormData): Promise<ActionResult> {
+  const s = await requireSessao();
+  if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+  const id = String(formData.get("documentoId") || "").trim();
+  const esc = escopoClientes(s);
+  if (esc && esc.length === 0) return { ok: false, error: "Sem acesso." };
+  const [prev] = await db
+    .select()
+    .from(documentos)
+    .where(and(eq(documentos.id, id), esc ? inArray(documentos.clienteId, esc) : undefined))
+    .limit(1);
+  if (!prev) return { ok: false, error: "Documento não encontrado." };
+
+  const arquivo = formData.get("arquivo");
+  if (!(arquivo instanceof File) || arquivo.size === 0) {
+    return { ok: false, error: "Selecione o arquivo da nova versão." };
+  }
+  if (arquivo.size > MAX_BYTES) return { ok: false, error: "Arquivo acima de 15 MB." };
+
+  const bytes = Buffer.from(await arquivo.arrayBuffer());
+  let chave: string;
+  try {
+    chave = await guardarArquivo(prev.clienteId, prev.nome, bytes, arquivo.type);
+  } catch {
+    return { ok: false, error: "Falha ao guardar o arquivo." };
+  }
+  const novaVersao = (prev.versao ?? 1) + 1;
+  const [row] = await db
+    .insert(documentos)
+    .values({
+      clienteId: prev.clienteId,
+      processoId: prev.processoId,
+      categoria: prev.categoria,
+      tipoPeca: prev.tipoPeca,
+      nome: prev.nome,
+      arquivoPath: chave,
+      mime: arquivo.type || null,
+      tamanhoBytes: bytes.length,
+      versao: novaVersao,
+      sigilo: prev.sigilo,
+      contemDadosSensiveis: prev.contemDadosSensiveis,
+      vencimentoEm: prev.vencimentoEm,
+      uploadedByTipo: ehEscritorio(s) ? "escritorio" : "polo",
+      uploadedById: s.id,
+      status: "nao_avaliado",
+    })
+    .returning({ id: documentos.id });
+  if (row?.id) {
+    await db.update(documentos).set({ substituidoPorId: row.id }).where(eq(documentos.id, id));
+  }
+  await registrarAudit({
+    acao: "write",
+    entidade: "documento_versao",
+    entidadeId: row?.id,
+    clienteId: prev.clienteId,
+    atorId: s.id,
+    atorPapel: ehEscritorio(s) ? "escritorio" : "polo",
+    detalhe: { versao: novaVersao, substituiu: id },
+  });
+  revalidatePath("/compliance/repositorio");
+  return { ok: true, message: `Nova versão (v${novaVersao}) enviada.` };
+}
+
 const STATUS_DOC = ["em_dia", "a_vencer", "pendente", "nao_avaliado"] as const;
 
 /** Validação HUMANA da conformidade do documento (só o escritório carimba). */
@@ -223,6 +308,32 @@ export async function renomearDocumento(id: string, nome: string): Promise<Actio
   });
   revalidatePath("/compliance/repositorio");
   return { ok: true, message: "Documento renomeado." };
+}
+
+/** Arquiva (soft-delete) um documento — sai das listagens, preserva a trilha. */
+export async function excluirDocumento(id: string): Promise<ActionResult> {
+  const s = await requireSessao();
+  if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+  const esc = escopoClientes(s);
+  if (esc && esc.length === 0) return { ok: false, error: "Sem acesso." };
+  const [d] = await db
+    .select({ clienteId: documentos.clienteId })
+    .from(documentos)
+    .where(and(eq(documentos.id, id), esc ? inArray(documentos.clienteId, esc) : undefined))
+    .limit(1);
+  if (!d) return { ok: false, error: "Documento não encontrado." };
+
+  await db.update(documentos).set({ arquivadoEm: new Date() }).where(eq(documentos.id, id));
+  await registrarAudit({
+    acao: "delete",
+    entidade: "documento",
+    entidadeId: id,
+    clienteId: d.clienteId,
+    atorId: s.id,
+    atorPapel: ehEscritorio(s) ? "escritorio" : "polo",
+  });
+  revalidatePath("/compliance/repositorio");
+  return { ok: true, message: "Documento arquivado." };
 }
 
 /**
