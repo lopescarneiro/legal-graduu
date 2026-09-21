@@ -16,6 +16,7 @@ import { formatDate, formatDateTime } from "@/lib/dates";
 import { rotuloRamo } from "@/lib/funil-constantes";
 import { NovoPrazoForm } from "./_components/novo-prazo-form";
 import { ConfirmarPrazo } from "./_components/confirmar-prazo";
+import { BaixaPrazo } from "./_components/baixa-prazo";
 import { AndamentoForm, AudienciaForm, ParteForm } from "./_components/registrar-itens";
 import { ProporEngajamentoForm } from "./_components/propor-engajamento-form";
 import { decidirEngajamento } from "@/lib/actions/engajamentos";
@@ -117,11 +118,12 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
                     <span className="font-medium">{pz.descricao ?? "Prazo"}</span>
                   </div>
                   {validado ? (
-                    <div className="mt-1 text-sm">
+                    <div className="mt-1 flex flex-wrap items-center gap-1 text-sm">
                       <span className="text-success">✓ Vence {formatDate(pz.dataVencimento)}</span>
-                      <span className="ml-2 text-xs text-muted">
+                      <span className="text-xs text-muted">
                         validado {formatDateTime(pz.validadoEm)}
                       </span>
+                      {escritorio && <BaixaPrazo prazoId={pz.id} status={pz.status} />}
                     </div>
                   ) : escritorio ? (
                     <div className="mt-1 text-sm">

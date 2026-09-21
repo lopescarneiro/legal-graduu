@@ -127,3 +127,44 @@ export async function confirmarPrazo(id: string, dataConfirmada: string): Promis
   revalidatePath("/prazos");
   return { ok: true, message: "Prazo confirmado." };
 }
+
+/** Baixa do prazo — cumprido ou perdido. Evento auditado. Só o escritório. */
+async function baixarPrazo(
+  id: string,
+  novoStatus: "cumprido" | "perdido",
+  motivo?: string,
+): Promise<ActionResult> {
+  const s = await requireEscritorio();
+  if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+
+  const [pz] = await db
+    .select({ clienteId: prazos.clienteId, processoId: prazos.processoId })
+    .from(prazos)
+    .where(eq(prazos.id, id))
+    .limit(1);
+  if (!pz) return { ok: false, error: "Prazo não encontrado." };
+  const esc = escopoClientes(s);
+  if (esc && !esc.includes(pz.clienteId)) return { ok: false, error: "Sem acesso." };
+
+  await db.update(prazos).set({ status: novoStatus }).where(eq(prazos.id, id));
+  await registrarAudit({
+    acao: "write",
+    entidade: "prazo_baixa",
+    entidadeId: id,
+    clienteId: pz.clienteId,
+    atorId: s.id,
+    atorPapel: "escritorio",
+    detalhe: { resultado: novoStatus, motivo: motivo ?? null },
+  });
+  revalidatePath(`/processos/${pz.processoId}`);
+  revalidatePath("/prazos");
+  return { ok: true, message: novoStatus === "cumprido" ? "Prazo cumprido." : "Prazo marcado como perdido." };
+}
+
+export async function cumprirPrazo(id: string): Promise<ActionResult> {
+  return baixarPrazo(id, "cumprido");
+}
+
+export async function marcarPrazoPerdido(id: string, motivo?: string): Promise<ActionResult> {
+  return baixarPrazo(id, "perdido", motivo);
+}
