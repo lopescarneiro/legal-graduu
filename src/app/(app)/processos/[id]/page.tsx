@@ -9,6 +9,8 @@ import {
   audiencias,
   partes,
   engajamentosContencioso,
+  provisoes,
+  tarefas,
 } from "@/db/schema";
 import { requireSessao, escopoClientes, ehEscritorio } from "@/lib/session";
 import { formatBRL, formatNumber } from "@/lib/money";
@@ -17,7 +19,14 @@ import { rotuloRamo } from "@/lib/funil-constantes";
 import { NovoPrazoForm } from "./_components/novo-prazo-form";
 import { ConfirmarPrazo } from "./_components/confirmar-prazo";
 import { BaixaPrazo } from "./_components/baixa-prazo";
-import { AndamentoForm, AudienciaForm, ParteForm } from "./_components/registrar-itens";
+import {
+  AndamentoForm,
+  AudienciaForm,
+  ParteForm,
+  ProvisaoForm,
+  TarefaForm,
+  ConcluirTarefa,
+} from "./_components/registrar-itens";
 import { EditarProcesso } from "./_components/editar-processo";
 import { ProporEngajamentoForm } from "./_components/propor-engajamento-form";
 import { decidirEngajamento } from "@/lib/actions/engajamentos";
@@ -48,16 +57,19 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
     .where(eq(prazos.processoId, p.id))
     .orderBy(asc(prazos.criadoEm));
 
-  const [listaAndamentos, listaAudiencias, listaPartes, listaEngajamentos] = await Promise.all([
-    db.select().from(andamentos).where(eq(andamentos.processoId, p.id)).orderBy(desc(andamentos.data)),
-    db.select().from(audiencias).where(eq(audiencias.processoId, p.id)).orderBy(asc(audiencias.dataHora)),
-    db.select().from(partes).where(eq(partes.processoId, p.id)),
-    db
-      .select()
-      .from(engajamentosContencioso)
-      .where(eq(engajamentosContencioso.processoId, p.id))
-      .orderBy(desc(engajamentosContencioso.propostoEm)),
-  ]);
+  const [listaAndamentos, listaAudiencias, listaPartes, listaEngajamentos, listaProvisoes, listaTarefas] =
+    await Promise.all([
+      db.select().from(andamentos).where(eq(andamentos.processoId, p.id)).orderBy(desc(andamentos.data)),
+      db.select().from(audiencias).where(eq(audiencias.processoId, p.id)).orderBy(asc(audiencias.dataHora)),
+      db.select().from(partes).where(eq(partes.processoId, p.id)),
+      db
+        .select()
+        .from(engajamentosContencioso)
+        .where(eq(engajamentosContencioso.processoId, p.id))
+        .orderBy(desc(engajamentosContencioso.propostoEm)),
+      db.select().from(provisoes).where(eq(provisoes.processoId, p.id)).orderBy(desc(provisoes.criadoEm)),
+      db.select().from(tarefas).where(eq(tarefas.processoId, p.id)).orderBy(asc(tarefas.status), desc(tarefas.criadoEm)),
+    ]);
 
   const campos: { rotulo: string; valor: string }[] = [
     { rotulo: "Ramo", valor: rotuloRamo(p.ramo) },
@@ -243,6 +255,70 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
           </Card>
         )}
       </section>
+
+      {escritorio && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-base font-semibold text-ink">Tarefas</h2>
+          <TarefaForm processoId={p.id} />
+          {listaTarefas.length === 0 ? (
+            <Card className="p-6 text-sm text-muted">Nenhuma tarefa.</Card>
+          ) : (
+            <Card className="flex flex-col divide-y divide-line">
+              {listaTarefas.map((t) => (
+              <div key={t.id} className="flex items-center justify-between gap-2 px-4 py-2 text-sm">
+                <div>
+                  <span className={t.status === "concluida" ? "text-muted line-through" : ""}>
+                    {t.titulo}
+                  </span>
+                  {t.prazoData && (
+                    <span className="ml-2 text-xs text-muted">prazo {formatDate(t.prazoData)}</span>
+                  )}
+                  {t.geradaPorAutomacao && <span className="ml-1 text-[10px] text-muted">(auto)</span>}
+                </div>
+                {escritorio && t.status === "aberta" ? (
+                  <ConcluirTarefa tarefaId={t.id} />
+                ) : (
+                  t.status !== "aberta" && (
+                    <Badge tone={t.status === "concluida" ? "success" : "neutral"}>{t.status}</Badge>
+                  )
+                )}
+              </div>
+            ))}
+          </Card>
+          )}
+        </section>
+      )}
+
+      {escritorio && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-base font-semibold text-ink">Provisão contábil</h2>
+          <ProvisaoForm processoId={p.id} />
+          {listaProvisoes.length === 0 ? (
+            <Card className="p-6 text-sm text-muted">Nenhuma provisão registrada.</Card>
+          ) : (
+            <Card className="flex flex-col divide-y divide-line">
+              {listaProvisoes.map((pv) => (
+                <div key={pv.id} className="flex items-center justify-between px-4 py-2 text-sm">
+                  <Badge
+                    tone={
+                      pv.classificacao === "provavel"
+                        ? "danger"
+                        : pv.classificacao === "possivel"
+                          ? "warn"
+                          : "neutral"
+                    }
+                  >
+                    {pv.classificacao}
+                  </Badge>
+                  <span>
+                    {pv.valorProvisionadoCents != null ? formatBRL(pv.valorProvisionadoCents) : "—"}
+                  </span>
+                </div>
+              ))}
+            </Card>
+          )}
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-semibold text-ink">Audiências</h2>

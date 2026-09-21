@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { processos, partes, prazos } from "@/db/schema";
+import { processos, partes, prazos, funilInscricoes, funilEtapas, tarefas } from "@/db/schema";
 import {
   requireSessao,
   requireEscritorio,
@@ -252,6 +252,31 @@ export async function moverEtapaProcesso(
     checarFatalPendente: true,
   });
   if (!r.ok) return r;
+
+  // Gera uma tarefa de providências na transição de etapa (item 23).
+  const [insc] = await db
+    .select({ processoId: funilInscricoes.entidadeId, clienteId: funilInscricoes.clienteId })
+    .from(funilInscricoes)
+    .where(eq(funilInscricoes.id, inscricaoId))
+    .limit(1);
+  if (insc?.processoId) {
+    const [etapa] = await db
+      .select({ nome: funilEtapas.nome })
+      .from(funilEtapas)
+      .where(eq(funilEtapas.id, etapaDestinoId))
+      .limit(1);
+    await db.insert(tarefas).values({
+      processoId: insc.processoId,
+      clienteId: insc.clienteId,
+      etapaChave: etapaDestinoId,
+      titulo: `Providências: ${etapa?.nome ?? "nova etapa"}`,
+      responsavelId: s.id,
+      status: "aberta",
+      geradaPorAutomacao: true,
+    });
+    revalidatePath(`/processos/${insc.processoId}`);
+  }
+
   revalidatePath("/processos");
   return { ok: true };
 }

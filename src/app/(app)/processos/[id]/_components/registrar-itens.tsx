@@ -6,6 +6,9 @@ import {
   registrarAndamento,
   registrarAudiencia,
   registrarParte,
+  registrarProvisao,
+  criarTarefa,
+  concluirTarefa,
 } from "@/lib/actions/processo-itens";
 import { Button, inputClasses } from "@/components/ui";
 
@@ -107,5 +110,53 @@ export function ParteForm({ processoId }: { processoId: string }) {
         <input type="checkbox" name="ehPolo" /> É o polo
       </label>
     </Form>
+  );
+}
+
+export function ProvisaoForm({ processoId }: { processoId: string }) {
+  return (
+    <Form action={registrarProvisao} processoId={processoId} submitLabel="Registrar provisão">
+      <select name="classificacao" className={inputCls} defaultValue="possivel">
+        <option value="provavel">Provável</option>
+        <option value="possivel">Possível</option>
+        <option value="remoto">Remoto</option>
+      </select>
+      <input
+        name="valor"
+        className={inputCls}
+        placeholder="Valor provisionado (R$)"
+        inputMode="decimal"
+      />
+    </Form>
+  );
+}
+
+export function TarefaForm({ processoId }: { processoId: string }) {
+  return (
+    <Form action={criarTarefa} processoId={processoId} submitLabel="Adicionar tarefa">
+      <input name="titulo" className={inputCls} placeholder="Título da tarefa" />
+      <input name="prazoData" type="date" className={inputCls} />
+    </Form>
+  );
+}
+
+export function ConcluirTarefa({ tarefaId }: { tarefaId: string }) {
+  const router = useRouter();
+  const [rodando, setRodando] = useState(false);
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="secondary"
+      disabled={rodando}
+      onClick={async () => {
+        setRodando(true);
+        await concluirTarefa(tarefaId);
+        setRodando(false);
+        router.refresh();
+      }}
+    >
+      Concluir
+    </Button>
   );
 }

@@ -3,14 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { processos, andamentos, audiencias, partes } from "@/db/schema";
+import { processos, andamentos, audiencias, partes, provisoes, tarefas } from "@/db/schema";
 import { requireEscritorio, somenteLeitura, escopoClientes } from "@/lib/session";
 import { todayISO, saoPauloParaUTC } from "@/lib/dates";
+import { parseBRLToCents } from "@/lib/money";
 import { registrarAudit } from "@/lib/audit";
 import type { ActionResult } from "@/lib/actions/result";
 
 const TIPOS_AUDIENCIA = ["conciliacao", "una", "instrucao", "outra"] as const;
 const MODALIDADES = ["presencial", "virtual"] as const;
+const CLASSIF_PROVISAO = ["provavel", "possivel", "remoto"] as const;
+const DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 async function processoDoEscopo(
   processoId: string,
@@ -98,4 +101,95 @@ export async function registrarParte(formData: FormData): Promise<ActionResult> 
   await registrarAudit({ acao: "write", entidade: "parte", clienteId: p.clienteId, atorId: s.id, atorPapel: "escritorio" });
   revalidatePath(`/processos/${processoId}`);
   return { ok: true, message: "Parte registrada." };
+}
+
+export async function registrarProvisao(formData: FormData): Promise<ActionResult> {
+  const s = await requireEscritorio();
+  if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+  const processoId = String(formData.get("processoId") || "").trim();
+  const p = await processoDoEscopo(processoId, escopoClientes(s));
+  if (!p) return { ok: false, error: "Processo não encontrado." };
+
+  const classificacao = String(formData.get("classificacao") || "possivel");
+  if (!CLASSIF_PROVISAO.includes(classificacao as (typeof CLASSIF_PROVISAO)[number])) {
+    return { ok: false, error: "Classificação inválida." };
+  }
+  const valorProvisionadoCents = parseBRLToCents(String(formData.get("valor") || ""));
+
+  await db.insert(provisoes).values({
+    processoId,
+    clienteId: p.clienteId,
+    classificacao: classificacao as (typeof CLASSIF_PROVISAO)[number],
+    valorProvisionadoCents: valorProvisionadoCents ?? null,
+    classificadoPorId: s.id,
+  });
+  await registrarAudit({
+    acao: "write",
+    entidade: "provisao",
+    clienteId: p.clienteId,
+    atorId: s.id,
+    atorPapel: "escritorio",
+    detalhe: { classificacao, valorProvisionadoCents },
+  });
+  revalidatePath(`/processos/${processoId}`);
+  return { ok: true, message: "Provisão registrada." };
+}
+
+export async function criarTarefa(formData: FormData): Promise<ActionResult> {
+  const s = await requireEscritorio();
+  if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+  const processoId = String(formData.get("processoId") || "").trim();
+  const p = await processoDoEscopo(processoId, escopoClientes(s));
+  if (!p) return { ok: false, error: "Processo não encontrado." };
+
+  const titulo = String(formData.get("titulo") || "").trim();
+  if (!titulo) return { ok: false, error: "Informe o título da tarefa." };
+  const prazoDataRaw = String(formData.get("prazoData") || "").trim();
+  const prazoData = DATA_RE.test(prazoDataRaw) ? prazoDataRaw : null;
+
+  await db.insert(tarefas).values({
+    processoId,
+    clienteId: p.clienteId,
+    titulo: titulo.slice(0, 200),
+    prazoData,
+    responsavelId: s.id,
+    status: "aberta",
+  });
+  await registrarAudit({
+    acao: "write",
+    entidade: "tarefa",
+    clienteId: p.clienteId,
+    atorId: s.id,
+    atorPapel: "escritorio",
+  });
+  revalidatePath(`/processos/${processoId}`);
+  return { ok: true, message: "Tarefa adicionada." };
+}
+
+export async function concluirTarefa(id: string): Promise<ActionResult> {
+  const s = await requireEscritorio();
+  if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+  const [t] = await db
+    .select({ clienteId: tarefas.clienteId, processoId: tarefas.processoId })
+    .from(tarefas)
+    .where(eq(tarefas.id, id))
+    .limit(1);
+  if (!t) return { ok: false, error: "Tarefa não encontrada." };
+  const esc = escopoClientes(s);
+  if (esc && !esc.includes(t.clienteId)) return { ok: false, error: "Sem acesso." };
+
+  await db
+    .update(tarefas)
+    .set({ status: "concluida", concluidaEm: new Date() })
+    .where(eq(tarefas.id, id));
+  await registrarAudit({
+    acao: "write",
+    entidade: "tarefa_conclusao",
+    entidadeId: id,
+    clienteId: t.clienteId,
+    atorId: s.id,
+    atorPapel: "escritorio",
+  });
+  if (t.processoId) revalidatePath(`/processos/${t.processoId}`);
+  return { ok: true, message: "Tarefa concluída." };
 }
