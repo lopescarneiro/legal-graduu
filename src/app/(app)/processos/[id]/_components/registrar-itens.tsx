@@ -10,6 +10,7 @@ import {
   criarTarefa,
   concluirTarefa,
 } from "@/lib/actions/processo-itens";
+import { anexarPeca } from "@/lib/actions/documentos";
 import { Button, inputClasses } from "@/components/ui";
 
 const inputCls = inputClasses;
@@ -136,6 +137,29 @@ export function TarefaForm({ processoId }: { processoId: string }) {
     <Form action={criarTarefa} processoId={processoId} submitLabel="Adicionar tarefa">
       <input name="titulo" className={inputCls} placeholder="Título da tarefa" />
       <input name="prazoData" type="date" className={inputCls} />
+    </Form>
+  );
+}
+
+export function PecaForm({ processoId }: { processoId: string }) {
+  return (
+    <Form action={anexarPeca} processoId={processoId} submitLabel="Anexar peça">
+      <select name="tipoPeca" className={inputCls} defaultValue="outro">
+        <option value="citacao">Citação</option>
+        <option value="contestacao">Contestação</option>
+        <option value="recurso">Recurso</option>
+        <option value="laudo">Laudo</option>
+        <option value="sentenca">Sentença</option>
+        <option value="prova">Prova</option>
+        <option value="outro">Outro</option>
+      </select>
+      <input name="nome" className={inputCls} placeholder="Nome da peça (opcional)" />
+      <input
+        name="arquivo"
+        type="file"
+        accept="application/pdf,image/*"
+        className="text-sm text-muted file:mr-3 file:rounded-[var(--r)] file:border-0 file:bg-canvas2 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink sm:col-span-2"
+      />
     </Form>
   );
 }

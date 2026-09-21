@@ -11,6 +11,7 @@ import {
   engajamentosContencioso,
   provisoes,
   tarefas,
+  documentos,
 } from "@/db/schema";
 import { requireSessao, escopoClientes, ehEscritorio } from "@/lib/session";
 import { formatBRL, formatNumber } from "@/lib/money";
@@ -26,6 +27,7 @@ import {
   ProvisaoForm,
   TarefaForm,
   ConcluirTarefa,
+  PecaForm,
 } from "./_components/registrar-itens";
 import { EditarProcesso } from "./_components/editar-processo";
 import { ProporEngajamentoForm } from "./_components/propor-engajamento-form";
@@ -70,6 +72,12 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
       db.select().from(provisoes).where(eq(provisoes.processoId, p.id)).orderBy(desc(provisoes.criadoEm)),
       db.select().from(tarefas).where(eq(tarefas.processoId, p.id)).orderBy(asc(tarefas.status), desc(tarefas.criadoEm)),
     ]);
+
+  const listaPecas = await db
+    .select()
+    .from(documentos)
+    .where(eq(documentos.processoId, p.id))
+    .orderBy(desc(documentos.criadoEm));
 
   const campos: { rotulo: string; valor: string }[] = [
     { rotulo: "Ramo", valor: rotuloRamo(p.ramo) },
@@ -354,6 +362,33 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
           </Card>
         )}
       </section>
+
+      {escritorio && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-base font-semibold text-ink">Peças</h2>
+          <PecaForm processoId={p.id} />
+          {listaPecas.length === 0 ? (
+            <Card className="p-6 text-sm text-muted">Nenhuma peça anexada.</Card>
+          ) : (
+            <Card className="flex flex-col divide-y divide-line">
+              {listaPecas.map((d) => (
+                <div key={d.id} className="flex items-center justify-between gap-2 px-4 py-2 text-sm">
+                  <div>
+                    <span className="font-medium">{d.nome}</span>
+                    {d.tipoPeca && <span className="ml-2 text-xs text-muted">{d.tipoPeca}</span>}
+                  </div>
+                  <a
+                    href={`/api/documentos/${d.id}`}
+                    className="text-xs text-brand hover:underline"
+                  >
+                    Baixar
+                  </a>
+                </div>
+              ))}
+            </Card>
+          )}
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-semibold text-ink">Partes</h2>

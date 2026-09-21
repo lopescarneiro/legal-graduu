@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { documentos, documentoAvaliacoes } from "@/db/schema";
+import { documentos, documentoAvaliacoes, processos } from "@/db/schema";
 import { requireSessao, somenteLeitura, ehEscritorio, escopoClientes } from "@/lib/session";
 import { guardarArquivo, lerArquivo } from "@/lib/storage";
 import { iaConfigurada, avaliarDocumento, type AvaliacaoDocumento } from "@/lib/ia";
@@ -82,6 +82,79 @@ export async function uploadDocumento(formData: FormData): Promise<ActionResult>
   });
   revalidatePath("/compliance/repositorio");
   return { ok: true, message: "Documento enviado." };
+}
+
+const TIPOS_PECA = [
+  "citacao",
+  "contestacao",
+  "recurso",
+  "laudo",
+  "sentenca",
+  "prova",
+  "outro",
+] as const;
+
+/** Anexa uma peça a um processo (categoria "processo" + tipoPeca). Só o escritório. */
+export async function anexarPeca(formData: FormData): Promise<ActionResult> {
+  const s = await requireSessao();
+  if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+  if (!ehEscritorio(s)) return { ok: false, error: "Apenas o escritório anexa peças." };
+
+  const processoId = String(formData.get("processoId") || "").trim();
+  const [proc] = await db
+    .select({ clienteId: processos.clienteId })
+    .from(processos)
+    .where(eq(processos.id, processoId))
+    .limit(1);
+  if (!proc) return { ok: false, error: "Processo não encontrado." };
+  const esc = escopoClientes(s);
+  if (esc && !esc.includes(proc.clienteId)) return { ok: false, error: "Sem acesso." };
+
+  const arquivo = formData.get("arquivo");
+  if (!(arquivo instanceof File) || arquivo.size === 0) {
+    return { ok: false, error: "Selecione o arquivo da peça." };
+  }
+  if (arquivo.size > MAX_BYTES) return { ok: false, error: "Arquivo acima de 15 MB." };
+  const tipoPeca = String(formData.get("tipoPeca") || "outro");
+  if (!TIPOS_PECA.includes(tipoPeca as (typeof TIPOS_PECA)[number])) {
+    return { ok: false, error: "Tipo de peça inválido." };
+  }
+  const nome = String(formData.get("nome") || arquivo.name || "Peça").trim().slice(0, 200);
+
+  const bytes = Buffer.from(await arquivo.arrayBuffer());
+  let chave: string;
+  try {
+    chave = await guardarArquivo(proc.clienteId, nome, bytes, arquivo.type);
+  } catch {
+    return { ok: false, error: "Falha ao guardar o arquivo." };
+  }
+  const [row] = await db
+    .insert(documentos)
+    .values({
+      clienteId: proc.clienteId,
+      processoId,
+      categoria: "processo",
+      tipoPeca,
+      nome,
+      arquivoPath: chave,
+      mime: arquivo.type || null,
+      tamanhoBytes: bytes.length,
+      uploadedByTipo: "escritorio",
+      uploadedById: s.id,
+      status: "nao_avaliado",
+    })
+    .returning({ id: documentos.id });
+  await registrarAudit({
+    acao: "write",
+    entidade: "peca",
+    entidadeId: row?.id,
+    clienteId: proc.clienteId,
+    atorId: s.id,
+    atorPapel: "escritorio",
+    detalhe: { tipoPeca, processoId },
+  });
+  revalidatePath(`/processos/${processoId}`);
+  return { ok: true, message: "Peça anexada." };
 }
 
 const STATUS_DOC = ["em_dia", "a_vencer", "pendente", "nao_avaliado"] as const;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { documentos } from "@/db/schema";
+import { documentos, processos } from "@/db/schema";
 import { getSessao, escopoClientes, ehEscritorio } from "@/lib/session";
 import { lerArquivo } from "@/lib/storage";
 import { registrarAudit, registrarAuditEstrito } from "@/lib/audit";
@@ -24,6 +24,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   // Segredo de justiça: só o escritório baixa.
   if (doc.sigilo === "segredo_justica" && !ehEscritorio(s)) {
     return NextResponse.json({ ok: false }, { status: 403 });
+  }
+  // Peça de processo em segredo de justiça herda a restrição do processo.
+  if (doc.processoId && !ehEscritorio(s)) {
+    const [proc] = await db
+      .select({ segredoJustica: processos.segredoJustica })
+      .from(processos)
+      .where(eq(processos.id, doc.processoId))
+      .limit(1);
+    if (proc?.segredoJustica) return NextResponse.json({ ok: false }, { status: 403 });
   }
 
   let bytes: Buffer;
