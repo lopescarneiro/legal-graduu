@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/prazos",
       "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/admin/verificar-auditoria",
+      "schedule": "0 6 * * *"
     }
   ]
 }

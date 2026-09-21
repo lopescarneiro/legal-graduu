@@ -22,6 +22,16 @@ export function storageConfigurado(): boolean {
   return !!supabaseCfg();
 }
 
+/** Em produção o disco é read-only (Vercel) — exigir Supabase configurado. */
+function exigirStorageEmProd(): void {
+  const prod = process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
+  if (prod && !supabaseCfg()) {
+    throw new Error(
+      "Storage não configurado em produção (defina SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY/SUPABASE_STORAGE_BUCKET_PRIVADO).",
+    );
+  }
+}
+
 function extDe(nome: string): string {
   const e = path.extname(nome || "");
   return e && e.length <= 10 ? e.toLowerCase() : "";
@@ -53,6 +63,7 @@ export async function guardarArquivo(
     if (!res.ok) throw new Error(`storage upload falhou (${res.status})`);
     return chave;
   }
+  exigirStorageEmProd();
   const abs = path.join(baseLocal(), chave);
   await fs.mkdir(path.dirname(abs), { recursive: true });
   await fs.writeFile(abs, bytes);
@@ -70,6 +81,7 @@ export async function lerArquivo(chave: string): Promise<Buffer> {
     if (!res.ok) throw new Error(`storage download falhou (${res.status})`);
     return Buffer.from(await res.arrayBuffer());
   }
+  exigirStorageEmProd();
   const abs = path.join(baseLocal(), chave);
   return fs.readFile(abs);
 }

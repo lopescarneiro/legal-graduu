@@ -18,6 +18,23 @@ export function todayISO(): string {
   return format(new Date(), "yyyy-MM-dd");
 }
 
+/**
+ * Interpreta um `datetime-local` (string sem fuso, ex.: "2026-09-21T14:30") como
+ * horário de BRASÍLIA (UTC-3, sem DST desde 2019) e devolve o instante em UTC.
+ * Evita o off-by-3h de `new Date(localSemFuso)` num servidor UTC (Vercel).
+ */
+export function saoPauloParaUTC(local: string): Date | null {
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2})?$/.exec(local.trim());
+  if (!m) return null;
+  const d = new Date(`${m[1]}T${m[2]}:00-03:00`);
+  return isValid(d) ? d : null;
+}
+
+/** Competência 'YYYY-MM' a partir de um datetime-local (relógio de Brasília). */
+export function competenciaSaoPaulo(local: string): string {
+  return local.slice(0, 7);
+}
+
 /** Converte string ISO ou Date em Date; null se inválida. */
 function toDate(value?: string | Date | null): Date | null {
   if (!value) return null;

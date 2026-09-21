@@ -21,6 +21,7 @@ import { AndamentoForm, AudienciaForm, ParteForm } from "./_components/registrar
 import { EditarProcesso } from "./_components/editar-processo";
 import { ProporEngajamentoForm } from "./_components/propor-engajamento-form";
 import { decidirEngajamento } from "@/lib/actions/engajamentos";
+import { confirmarProcesso } from "@/lib/actions/processos";
 import { Card, Badge, Button } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -81,7 +82,21 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
           {p.numeroCnj ?? p.tipoAcao ?? "Processo"}
         </h1>
         {p.pendenteConfirmacao && (
-          <span className="text-xs text-warn">Rascunho — pendente de confirmação</span>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-xs text-warn">Rascunho (extração por IA) — pendente de confirmação</span>
+            {escritorio && (
+              <form
+                action={async () => {
+                  "use server";
+                  await confirmarProcesso(p.id);
+                }}
+              >
+                <Button type="submit" size="sm">
+                  Confirmar
+                </Button>
+              </form>
+            )}
+          </div>
         )}
       </div>
 

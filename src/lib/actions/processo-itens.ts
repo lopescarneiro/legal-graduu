@@ -5,9 +5,12 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { processos, andamentos, audiencias, partes } from "@/db/schema";
 import { requireEscritorio, somenteLeitura, escopoClientes } from "@/lib/session";
-import { todayISO } from "@/lib/dates";
+import { todayISO, saoPauloParaUTC } from "@/lib/dates";
 import { registrarAudit } from "@/lib/audit";
 import type { ActionResult } from "@/lib/actions/result";
+
+const TIPOS_AUDIENCIA = ["conciliacao", "una", "instrucao", "outra"] as const;
+const MODALIDADES = ["presencial", "virtual"] as const;
 
 async function processoDoEscopo(
   processoId: string,
@@ -49,10 +52,16 @@ export async function registrarAudiencia(formData: FormData): Promise<ActionResu
   if (!p) return { ok: false, error: "Processo não encontrado." };
 
   const dataHoraRaw = String(formData.get("dataHora") || "").trim();
-  const dt = dataHoraRaw ? new Date(dataHoraRaw) : null;
-  if (!dt || Number.isNaN(dt.getTime())) return { ok: false, error: "Informe data e hora." };
+  const dt = saoPauloParaUTC(dataHoraRaw); // datetime-local interpretado como Brasília
+  if (!dt) return { ok: false, error: "Informe data e hora." };
   const tipo = String(formData.get("tipo") || "conciliacao");
   const modalidade = String(formData.get("modalidade") || "presencial");
+  if (!TIPOS_AUDIENCIA.includes(tipo as (typeof TIPOS_AUDIENCIA)[number])) {
+    return { ok: false, error: "Tipo de audiência inválido." };
+  }
+  if (!MODALIDADES.includes(modalidade as (typeof MODALIDADES)[number])) {
+    return { ok: false, error: "Modalidade inválida." };
+  }
   const vara = String(formData.get("vara") || "").trim() || null;
   const prepostoNome = String(formData.get("prepostoNome") || "").trim() || null;
   const prepostoWhatsapp = String(formData.get("prepostoWhatsapp") || "").trim() || null;
@@ -60,9 +69,9 @@ export async function registrarAudiencia(formData: FormData): Promise<ActionResu
   await db.insert(audiencias).values({
     processoId,
     clienteId: p.clienteId,
-    tipo: tipo as "conciliacao" | "una" | "instrucao" | "outra",
+    tipo: tipo as (typeof TIPOS_AUDIENCIA)[number],
     dataHora: dt,
-    modalidade: modalidade as "presencial" | "virtual",
+    modalidade: modalidade as (typeof MODALIDADES)[number],
     vara,
     prepostoNome,
     prepostoWhatsapp,

@@ -94,6 +94,8 @@ export async function criarProcesso(
       tribunal: texto(extras?.tribunal),
       dataCitacao,
       situacao: "ativo",
+      // Nasce como RASCUNHO quando veio da extração por IA (revisão humana pendente).
+      pendenteConfirmacao: !!extras,
       advogadoResponsavelId: ehEscritorio(s) ? s.id : null,
     })
     .returning({ id: processos.id });
@@ -205,6 +207,33 @@ export async function atualizarProcesso(id: string, formData: FormData): Promise
   revalidatePath(`/processos/${id}`);
   revalidatePath("/processos");
   return { ok: true, message: "Processo atualizado." };
+}
+
+/** Confirma um processo-rascunho (criado por IA), zerando pendenteConfirmacao. */
+export async function confirmarProcesso(id: string): Promise<ActionResult> {
+  const s = await requireEscritorio();
+  if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+  const [p] = await db
+    .select({ clienteId: processos.clienteId })
+    .from(processos)
+    .where(eq(processos.id, id))
+    .limit(1);
+  if (!p) return { ok: false, error: "Processo não encontrado." };
+  const esc = escopoClientes(s);
+  if (esc && !esc.includes(p.clienteId)) return { ok: false, error: "Sem acesso." };
+
+  await db.update(processos).set({ pendenteConfirmacao: false }).where(eq(processos.id, id));
+  await registrarAudit({
+    acao: "write",
+    entidade: "processo_confirmacao",
+    entidadeId: id,
+    clienteId: p.clienteId,
+    atorId: s.id,
+    atorPapel: "escritorio",
+  });
+  revalidatePath(`/processos/${id}`);
+  revalidatePath("/processos");
+  return { ok: true, message: "Processo confirmado." };
 }
 
 /** Mover card no board — operação do ESCRITÓRIO. */

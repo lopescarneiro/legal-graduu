@@ -5,6 +5,7 @@ import { and, count, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { reunioes } from "@/db/schema";
 import { requireSessao, somenteLeitura, ehEscritorio, escopoClientes } from "@/lib/session";
+import { saoPauloParaUTC, competenciaSaoPaulo } from "@/lib/dates";
 import { registrarAudit } from "@/lib/audit";
 import type { ActionResult } from "@/lib/actions/result";
 
@@ -13,8 +14,9 @@ export async function agendarReuniao(formData: FormData): Promise<ActionResult> 
   if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
 
   const dataHoraRaw = String(formData.get("dataHora") || "").trim();
-  const dt = dataHoraRaw ? new Date(dataHoraRaw) : null;
-  if (!dt || Number.isNaN(dt.getTime())) return { ok: false, error: "Informe data e hora." };
+  const dt = saoPauloParaUTC(dataHoraRaw); // datetime-local interpretado como Brasília
+  if (!dt) return { ok: false, error: "Informe data e hora." };
+  if (dt.getTime() < Date.now()) return { ok: false, error: "A reunião precisa ser no futuro." };
   const tipo = String(formData.get("tipo") || "").trim() || null;
   const link = String(formData.get("link") || "").trim() || null;
 
@@ -27,7 +29,7 @@ export async function agendarReuniao(formData: FormData): Promise<ActionResult> 
     if (!clienteId) return { ok: false, error: "Sessão sem cliente." };
   }
 
-  const competencia = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+  const competencia = competenciaSaoPaulo(dataHoraRaw); // mês pelo relógio de Brasília
   // Regra do plano: 2 reuniões/mês, não cumulativas (canceladas não contam).
   const [{ n }] = await db
     .select({ n: count() })

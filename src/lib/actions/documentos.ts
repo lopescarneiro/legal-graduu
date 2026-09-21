@@ -12,7 +12,7 @@ import type { ActionResult } from "@/lib/actions/result";
 
 const CATS = ["funcionarios", "fornecedores", "locacao", "lgpd", "societario", "outros"] as const;
 const SIGILOS = ["normal", "sensivel", "segredo_justica"] as const;
-const MAX_BYTES = 14 * 1024 * 1024;
+const MAX_BYTES = 15 * 1024 * 1024; // abaixo do teto de framework (20mb) com folga de multipart
 
 export async function uploadDocumento(formData: FormData): Promise<ActionResult> {
   const s = await requireSessao();
