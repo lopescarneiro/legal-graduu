@@ -41,6 +41,7 @@ export function NovoProcessoForm({
 
   // IA
   const [arquivo, setArquivo] = useState<File | null>(null);
+  const [semSigilo, setSemSigilo] = useState(false);
   const [analisando, setAnalisando] = useState(false);
   const [erroIa, setErroIa] = useState<string | null>(null);
   const [extras, setExtras] = useState<Extras | null>(null);
@@ -49,6 +50,10 @@ export function NovoProcessoForm({
   async function analisar() {
     if (!arquivo) {
       setErroIa("Selecione o arquivo da citação.");
+      return;
+    }
+    if (!semSigilo) {
+      setErroIa("Confirme que o documento não está sob segredo de justiça para enviar à IA.");
       return;
     }
     setAnalisando(true);
@@ -105,6 +110,18 @@ export function NovoProcessoForm({
               prazo — você confere tudo antes de criar. A palavra final é sua.
             </p>
           </div>
+          <label className="flex items-start gap-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={semSigilo}
+              onChange={(e) => setSemSigilo(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              Confirmo que este documento <strong>não está sob segredo de justiça</strong> e autorizo
+              sua análise por IA (dado sensível não deve ir para o pipeline — LGPD art. 33).
+            </span>
+          </label>
           <div className="flex flex-wrap items-center gap-2">
             <input
               type="file"
@@ -112,7 +129,13 @@ export function NovoProcessoForm({
               onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
               className="text-sm text-muted file:mr-3 file:rounded-[var(--r)] file:border-0 file:bg-canvas2 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink"
             />
-            <Button type="button" variant="secondary" size="sm" onClick={analisar} disabled={analisando}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={analisar}
+              disabled={analisando || !semSigilo}
+            >
               {analisando ? "Analisando…" : "Analisar"}
             </Button>
           </div>

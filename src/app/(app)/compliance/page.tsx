@@ -12,10 +12,9 @@ const CARDS = [
   {
     href: "/compliance/repositorio",
     titulo: "Repositório",
-    desc: "Documentos por categoria, com status e vencimento.",
+    desc: "Documentos por categoria, com status, vencimento e avaliação por IA (escritório).",
     ativo: true,
   },
-  { href: "#", titulo: "Avaliação por IA", desc: "Pendências e riscos dos documentos.", ativo: false },
 ];
 
 export default function Compliance() {

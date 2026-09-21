@@ -84,7 +84,7 @@ export default async function ProcessosPage({
                         >
                           {c.numeroCnj ?? c.tipoAcao ?? "Processo"}
                         </Link>
-                        {c.pendenteConfirmacao && <Badge tone="warn">rascunho</Badge>}
+                        {escritorio && c.pendenteConfirmacao && <Badge tone="warn">rascunho</Badge>}
                       </div>
                       {escritorio && c.poloNome && (
                         <div className="truncate text-[11px] text-brand">{c.poloNome}</div>

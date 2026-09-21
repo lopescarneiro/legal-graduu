@@ -97,7 +97,11 @@ export async function confirmarPrazo(id: string, dataConfirmada: string): Promis
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dataConfirmada)) return { ok: false, error: "Data inválida." };
 
   const [pz] = await db
-    .select({ clienteId: prazos.clienteId, dataSugerida: prazos.dataSugerida })
+    .select({
+      clienteId: prazos.clienteId,
+      dataSugerida: prazos.dataSugerida,
+      processoId: prazos.processoId,
+    })
     .from(prazos)
     .where(eq(prazos.id, id))
     .limit(1);
@@ -124,6 +128,7 @@ export async function confirmarPrazo(id: string, dataConfirmada: string): Promis
     atorPapel: "escritorio",
     detalhe: { valorMaquina: pz.dataSugerida, valorConfirmado: dataConfirmada },
   });
+  revalidatePath(`/processos/${pz.processoId}`);
   revalidatePath("/prazos");
   return { ok: true, message: "Prazo confirmado." };
 }

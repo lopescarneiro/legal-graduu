@@ -62,6 +62,8 @@ export async function responderConsulta(id: string, resposta: string): Promise<A
     .where(eq(consultas.id, id))
     .limit(1);
   if (!c) return { ok: false, error: "Consulta não encontrada." };
+  const escR = escopoClientes(s);
+  if (escR && !escR.includes(c.clienteId)) return { ok: false, error: "Sem acesso." };
 
   await db
     .update(consultas)
@@ -96,6 +98,14 @@ export async function encerrarConsulta(id: string): Promise<ActionResult> {
   const esc = escopoClientes(s);
   if (esc && !esc.includes(c.clienteId)) return { ok: false, error: "Sem acesso." };
   await db.update(consultas).set({ status: "encerrada" }).where(eq(consultas.id, id));
+  await registrarAudit({
+    acao: "write",
+    entidade: "consulta_encerramento",
+    entidadeId: id,
+    clienteId: c.clienteId,
+    atorId: s.id,
+    atorPapel: ehEscritorio(s) ? "escritorio" : "polo",
+  });
   revalidatePath("/consultas");
   return { ok: true };
 }

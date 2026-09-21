@@ -53,7 +53,19 @@ export default async function ReunioesPage() {
             <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
               <div>
                 <div className="font-medium">{formatDateTime(r.dataHora)}</div>
-                <div className="text-xs text-muted">{r.tipo ?? "Reunião"}</div>
+                <div className="flex items-center gap-2 text-xs text-muted">
+                  <span>{r.tipo ?? "Reunião"}</span>
+                  {r.link && r.status === "agendada" && (
+                    <a
+                      href={r.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-brand hover:underline"
+                    >
+                      Entrar →
+                    </a>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Badge
