@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { prazos, processos } from "@/db/schema";
+import { prazos, processos, clientes } from "@/db/schema";
 import { requireSessao, escopoClientes, ehEscritorio } from "@/lib/session";
 import { formatDate } from "@/lib/dates";
 import { Card, Badge } from "@/components/ui";
@@ -28,9 +28,11 @@ export default async function PrazosPage() {
           processoId: processos.id,
           numeroCnj: processos.numeroCnj,
           tipoAcao: processos.tipoAcao,
+          poloNome: clientes.nome,
         })
         .from(prazos)
         .innerJoin(processos, eq(processos.id, prazos.processoId))
+        .leftJoin(clientes, eq(clientes.id, prazos.clienteId))
         .where(
           and(
             esc ? inArray(prazos.clienteId, esc) : undefined,
@@ -88,6 +90,9 @@ export default async function PrazosPage() {
                       {p.numeroCnj ?? p.tipoAcao ?? "Processo"}
                     </Link>
                     <span className="text-xs text-muted">{p.descricao ?? "Prazo"}</span>
+                    {escritorio && p.poloNome && (
+                      <span className="text-xs text-brand">· {p.poloNome}</span>
+                    )}
                   </div>
                 </div>
                 <div className="text-sm">

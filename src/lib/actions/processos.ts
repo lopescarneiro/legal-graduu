@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { processos, partes, prazos } from "@/db/schema";
 import {
@@ -153,6 +154,57 @@ export async function criarProcesso(
   });
   revalidatePath("/processos");
   return { ok: true, id: row?.id, message: "Processo criado." };
+}
+
+const SITUACOES = ["ativo", "suspenso", "encerrado", "arquivado"] as const;
+
+/** Edita o processo (CNJ, tipo, valor, vara, comarca, situação). Só o escritório. */
+export async function atualizarProcesso(id: string, formData: FormData): Promise<ActionResult> {
+  const s = await requireEscritorio();
+  if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
+
+  const [p] = await db
+    .select({ clienteId: processos.clienteId })
+    .from(processos)
+    .where(eq(processos.id, id))
+    .limit(1);
+  if (!p) return { ok: false, error: "Processo não encontrado." };
+  const esc = escopoClientes(s);
+  if (esc && !esc.includes(p.clienteId)) return { ok: false, error: "Sem acesso." };
+
+  const situacao = String(formData.get("situacao") || "ativo");
+  if (!SITUACOES.includes(situacao as (typeof SITUACOES)[number])) {
+    return { ok: false, error: "Situação inválida." };
+  }
+  const numeroCnj = String(formData.get("numeroCnj") || "").trim() || null;
+  const tipoAcao = String(formData.get("tipoAcao") || "").trim() || null;
+  const vara = String(formData.get("vara") || "").trim() || null;
+  const comarca = String(formData.get("comarca") || "").trim() || null;
+  const valorCausaCents = parseBRLToCents(String(formData.get("valorCausa") || ""));
+
+  await db
+    .update(processos)
+    .set({
+      situacao: situacao as (typeof SITUACOES)[number],
+      numeroCnj,
+      tipoAcao,
+      vara,
+      comarca,
+      valorCausaCents: valorCausaCents ?? null,
+    })
+    .where(eq(processos.id, id));
+  await registrarAudit({
+    acao: "write",
+    entidade: "processo",
+    entidadeId: id,
+    clienteId: p.clienteId,
+    atorId: s.id,
+    atorPapel: "escritorio",
+    detalhe: { situacao, numeroCnj },
+  });
+  revalidatePath(`/processos/${id}`);
+  revalidatePath("/processos");
+  return { ok: true, message: "Processo atualizado." };
 }
 
 /** Mover card no board — operação do ESCRITÓRIO. */

@@ -11,13 +11,14 @@ import {
   engajamentosContencioso,
 } from "@/db/schema";
 import { requireSessao, escopoClientes, ehEscritorio } from "@/lib/session";
-import { formatBRL } from "@/lib/money";
+import { formatBRL, formatNumber } from "@/lib/money";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { rotuloRamo } from "@/lib/funil-constantes";
 import { NovoPrazoForm } from "./_components/novo-prazo-form";
 import { ConfirmarPrazo } from "./_components/confirmar-prazo";
 import { BaixaPrazo } from "./_components/baixa-prazo";
 import { AndamentoForm, AudienciaForm, ParteForm } from "./_components/registrar-itens";
+import { EditarProcesso } from "./_components/editar-processo";
 import { ProporEngajamentoForm } from "./_components/propor-engajamento-form";
 import { decidirEngajamento } from "@/lib/actions/engajamentos";
 import { Card, Badge, Button } from "@/components/ui";
@@ -97,6 +98,20 @@ export default async function ProcessoDetalhe({ params }: { params: Promise<{ id
         <Card className="border-danger/40 bg-danger-tint px-3 py-2 text-sm text-danger">
           Processo em segredo de justiça.
         </Card>
+      )}
+
+      {escritorio && (
+        <EditarProcesso
+          inicial={{
+            id: p.id,
+            numeroCnj: p.numeroCnj ?? "",
+            tipoAcao: p.tipoAcao ?? "",
+            valorCausa: p.valorCausaCents != null ? formatNumber(p.valorCausaCents) : "",
+            vara: p.vara ?? "",
+            comarca: p.comarca ?? "",
+            situacao: p.situacao,
+          }}
+        />
       )}
 
       <section className="flex flex-col gap-3">

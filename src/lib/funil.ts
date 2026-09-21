@@ -1,7 +1,15 @@
 import "server-only";
 import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { funis, funilEtapas, funilInscricoes, funilHistorico, processos, prazos } from "@/db/schema";
+import {
+  funis,
+  funilEtapas,
+  funilInscricoes,
+  funilHistorico,
+  processos,
+  prazos,
+  clientes,
+} from "@/db/schema";
 import { TIPO_FUNIL_POR_RAMO, type Ramo } from "./funil-constantes";
 
 type TipoFunil = (typeof TIPO_FUNIL_POR_RAMO)[Ramo];
@@ -151,6 +159,7 @@ export type CardBoard = {
   valorCausaCents: number | null;
   situacao: string;
   pendenteConfirmacao: boolean;
+  poloNome: string | null;
 };
 
 /** Dados do board de um ramo, cercados por cliente. null = sem funil semeado. */
@@ -170,9 +179,11 @@ export async function board(ramo: Ramo, esc: string[] | null) {
       valorCausaCents: processos.valorCausaCents,
       situacao: processos.situacao,
       pendenteConfirmacao: processos.pendenteConfirmacao,
+      poloNome: clientes.nome,
     })
     .from(funilInscricoes)
     .innerJoin(processos, eq(processos.id, funilInscricoes.entidadeId))
+    .leftJoin(clientes, eq(clientes.id, processos.clienteId))
     .where(and(eq(funilInscricoes.funilId, f.id), cerca));
   return { funil: f, etapas, cards };
 }

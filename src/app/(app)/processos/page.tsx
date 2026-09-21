@@ -86,6 +86,9 @@ export default async function ProcessosPage({
                         </Link>
                         {c.pendenteConfirmacao && <Badge tone="warn">rascunho</Badge>}
                       </div>
+                      {escritorio && c.poloNome && (
+                        <div className="truncate text-[11px] text-brand">{c.poloNome}</div>
+                      )}
                       {c.valorCausaCents != null && (
                         <div className="text-xs text-muted">{formatBRL(c.valorCausaCents)}</div>
                       )}
