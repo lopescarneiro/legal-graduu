@@ -65,7 +65,7 @@ function calcularHash(prevHash: string | null, r: RegistroCanonico): string {
  * escrita é serializada por advisory lock para a cadeia não bifurcar sob
  * concorrência serverless; em dev (PGlite, conexão única) o lock é dispensável.
  */
-export async function registrarAudit(p: {
+type EntradaAudit = {
   acao: AcaoAudit;
   entidade: string;
   entidadeId?: string | null;
@@ -74,37 +74,52 @@ export async function registrarAudit(p: {
   atorPapel?: string | null;
   ip?: string | null;
   detalhe?: Record<string, unknown>;
-}): Promise<void> {
-  try {
-    const registro: RegistroCanonico = {
-      criadoEm: new Date(),
-      clienteId: p.clienteId ?? null,
-      atorId: p.atorId ?? null,
-      atorPapel: p.atorPapel ?? null,
-      ip: p.ip ?? null,
-      acao: p.acao,
-      entidade: p.entidade,
-      entidadeId: p.entidadeId ?? null,
-      detalhe: p.detalhe ?? null,
-    };
+};
 
-    await db.transaction(async (tx) => {
-      if (process.env.DATABASE_URL) {
-        // Serializa os escritores da cadeia; liberado no fim da transação.
-        await tx.execute(sql`select pg_advisory_xact_lock(${LOCK_CADEIA})`);
-      }
-      const [ultimo] = await tx
-        .select({ hash: auditLog.hash })
-        .from(auditLog)
-        .orderBy(desc(auditLog.criadoEm), desc(auditLog.id))
-        .limit(1);
-      const prevHash = ultimo?.hash ?? null;
-      const hash = calcularHash(prevHash, registro);
-      await tx.insert(auditLog).values({ ...registro, prevHash, hash });
-    });
+/** Grava a entrada encadeada. LANÇA em caso de falha (base das duas variantes). */
+async function gravarAudit(p: EntradaAudit): Promise<void> {
+  const registro: RegistroCanonico = {
+    criadoEm: new Date(),
+    clienteId: p.clienteId ?? null,
+    atorId: p.atorId ?? null,
+    atorPapel: p.atorPapel ?? null,
+    ip: p.ip ?? null,
+    acao: p.acao,
+    entidade: p.entidade,
+    entidadeId: p.entidadeId ?? null,
+    detalhe: p.detalhe ?? null,
+  };
+
+  await db.transaction(async (tx) => {
+    if (process.env.DATABASE_URL) {
+      // Serializa os escritores da cadeia; liberado no fim da transação.
+      await tx.execute(sql`select pg_advisory_xact_lock(${LOCK_CADEIA})`);
+    }
+    const [ultimo] = await tx
+      .select({ hash: auditLog.hash })
+      .from(auditLog)
+      .orderBy(desc(auditLog.criadoEm), desc(auditLog.id))
+      .limit(1);
+    const prevHash = ultimo?.hash ?? null;
+    const hash = calcularHash(prevHash, registro);
+    await tx.insert(auditLog).values({ ...registro, prevHash, hash });
+  });
+}
+
+export async function registrarAudit(p: EntradaAudit): Promise<void> {
+  try {
+    await gravarAudit(p);
   } catch {
     // auditoria é best-effort — nunca falha a ação de negócio
   }
+}
+
+/**
+ * Variante FAIL-CLOSED: usada em acesso a dado SIGILOSO (download de documento
+ * sensível). Se a trilha não puder ser gravada, a operação NÃO deve prosseguir.
+ */
+export async function registrarAuditEstrito(p: EntradaAudit): Promise<void> {
+  await gravarAudit(p);
 }
 
 /**

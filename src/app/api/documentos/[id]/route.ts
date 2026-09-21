@@ -4,13 +4,13 @@ import { db } from "@/db";
 import { documentos } from "@/db/schema";
 import { getSessao, escopoClientes, ehEscritorio } from "@/lib/session";
 import { lerArquivo } from "@/lib/storage";
-import { registrarAudit } from "@/lib/audit";
+import { registrarAudit, registrarAuditEstrito } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Download autenticado, cercado por cliente + sigilo, e AUDITADO. */
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const s = await getSessao();
   if (!s) return NextResponse.json({ ok: false }, { status: 401 });
 
@@ -33,14 +33,26 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ ok: false }, { status: 404 });
   }
 
-  await registrarAudit({
-    acao: "download",
+  const evento = {
+    acao: "download" as const,
     entidade: "documento",
     entidadeId: doc.id,
     clienteId: doc.clienteId,
     atorId: s.id,
     atorPapel: ehEscritorio(s) ? "escritorio" : "polo",
-  });
+    ip: req.headers.get("x-forwarded-for"),
+    detalhe: { nome: doc.nome, sigilo: doc.sigilo },
+  };
+  // Documento sensível/sigiloso: auditoria FAIL-CLOSED (se não gravar, não serve).
+  if (doc.sigilo !== "normal" || doc.contemDadosSensiveis) {
+    try {
+      await registrarAuditEstrito(evento);
+    } catch {
+      return NextResponse.json({ ok: false, error: "auditoria_indisponivel" }, { status: 503 });
+    }
+  } else {
+    await registrarAudit(evento);
+  }
 
   return new NextResponse(new Uint8Array(bytes), {
     headers: {

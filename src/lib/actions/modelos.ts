@@ -82,6 +82,14 @@ export async function alternarAtivoModelo(id: string, ativo: boolean): Promise<A
   const s = await requireEscritorio();
   if (somenteLeitura(s)) return { ok: false, error: "Sessão somente leitura." };
   await db.update(modelos).set({ ativo }).where(eq(modelos.id, id));
+  await registrarAudit({
+    acao: "write",
+    entidade: "modelo",
+    entidadeId: id,
+    atorId: s.id,
+    atorPapel: "escritorio",
+    detalhe: { ativo },
+  });
   revalidatePath("/compliance/modelos");
   return { ok: true };
 }

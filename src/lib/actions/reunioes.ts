@@ -82,6 +82,15 @@ export async function atualizarStatusReuniao(
   if (esc && !esc.includes(r.clienteId)) return { ok: false, error: "Sem acesso." };
 
   await db.update(reunioes).set({ status }).where(eq(reunioes.id, id));
+  await registrarAudit({
+    acao: "write",
+    entidade: "reuniao_status",
+    entidadeId: id,
+    clienteId: r.clienteId,
+    atorId: s.id,
+    atorPapel: ehEscritorio(s) ? "escritorio" : "polo",
+    detalhe: { status },
+  });
   revalidatePath("/reunioes");
   return { ok: true };
 }
